@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ny Sudoku</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: #f4f8fb;
+      color: #1f2937;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #d6e0ea;
+      border-radius: 14px;
+      padding: 22px;
+    }
+    .top-link {
+      text-decoration: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #1f2937;
+      background: #fff;
+      margin-right: 8px;
+    }
+    .game {
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 10px;
+      background: #fafcff;
+    }
+    .game-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .right-side {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .load-link {
+      text-decoration: none;
+      color: #1d4ed8;
+    }
+    .load-link:hover {
+      text-decoration: underline;
+    }
+    .load-btn {
+      display: inline-block;
+      text-decoration: none;
+      background: #2563eb;
+      color: #fff;
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .load-btn:hover {
+      background: #1d4ed8;
+    }
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.92rem;
+      color: #475569;
+    }
+    .empty {
+      margin-top: 12px;
+      color: #475569;
+    }
+
+    .grid-preview {
+      display: grid;
+      grid-template-columns: repeat(9, 12px);
+      grid-template-rows: repeat(9, 12px);
+      border: 1.5px solid #1e293b;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .cell-preview {
+      width: 12px;
+      height: 12px;
+      border: 0.4px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.5rem;
+      font-weight: 600;
+      color: #0f172a;
+      background: #fff;
+    }
+
+    .cell-preview:nth-child(3n) {
+      border-right: 1px solid #0f172a;
+    }
+
+    .cell-preview:nth-child(27n+1),
+    .cell-preview:nth-child(27n+2),
+    .cell-preview:nth-child(27n+3),
+    .cell-preview:nth-child(27n+28),
+    .cell-preview:nth-child(27n+29),
+    .cell-preview:nth-child(27n+30),
+    .cell-preview:nth-child(27n+55),
+    .cell-preview:nth-child(27n+56),
+    .cell-preview:nth-child(27n+57) {
+      border-bottom: 1px solid #0f172a;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Ny Sudoku</h1>
+    <p>
+      <a class="top-link" href="{{ url_for('main.index') }}">Startsida</a>
+      <a class="top-link" href="{{ url_for('main.builder') }}">Läs in ny Sudoku</a>
+      <a class="top-link" href="{{ url_for('main.ongoing_games') }}">Pågående spel</a>
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <p class="empty">{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% if games %}
+      {% for game in games %}
+        <article class="game">
+          <div class="game-head">
+            <h3><a class="load-link" href="{{ url_for('main.builder', game_id=game.id) }}">{{ game.difficulty|capitalize }}: {{ game.title }}</a></h3>
+            <div class="right-side">
+              <div class="grid-preview">
+                {% set grid = game.get('grid', []) or [] %}
+                {% for r in range(9) %}
+                  {% for c in range(9) %}
+                    {% set cell_value = grid[r][c] if (r < grid|length and c < grid[r]|length) else '' %}
+                    <div class="cell-preview">{{ cell_value }}</div>
+                  {% endfor %}
+                {% endfor %}
+              </div>
+              <a class="load-btn" href="{{ url_for('main.builder', game_id=game.id) }}">Ladda spel</a>
+            </div>
+          </div>
+          <div class="meta">
+            <span>Skapad: {{ game.created_at }}</span>
+            <span>ID: {{ game.id }}</span>
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <p class="empty">Inga grund-spel ar sparade an.</p>
+    {% endif %}
+  </main>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pågående Sudoku-spel</title>
+  <title>Avslutade spel</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <style>
     body {
@@ -14,7 +14,7 @@
       padding: 24px;
     }
     .wrap {
-      max-width: 900px;
+      max-width: 920px;
       margin: 0 auto;
       background: #fff;
       border: 1px solid #d6e0ea;
@@ -44,17 +44,10 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-    .load-link {
-      text-decoration: none;
-      color: #1d4ed8;
-    }
-    .load-link:hover {
-      text-decoration: underline;
-    }
-    .load-btn {
+    .view-link {
       display: inline-block;
       text-decoration: none;
-      background: #2563eb;
+      background: #166534;
       color: #fff;
       border-radius: 8px;
       padding: 7px 10px;
@@ -62,22 +55,8 @@
       font-weight: 600;
       white-space: nowrap;
     }
-    .load-btn:hover {
-      background: #1d4ed8;
-    }
-    .del-btn {
-      background: none;
-      border: 1px solid #fca5a5;
-      color: #dc2626;
-      border-radius: 8px;
-      padding: 7px 10px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .del-btn:hover {
-      background: #fef2f2;
+    .view-link:hover {
+      background: #14532d;
     }
     .meta {
       display: flex;
@@ -85,6 +64,7 @@
       flex-wrap: wrap;
       font-size: 0.92rem;
       color: #475569;
+      margin-top: 4px;
     }
     .empty {
       margin-top: 12px;
@@ -94,10 +74,11 @@
 </head>
 <body>
   <main class="wrap">
-    <h1>Pågående Sudoku-spel</h1>
+    <h1>Avslutade spel</h1>
     <p>
       <a class="top-link" href="{{ url_for('main.index') }}">Startsida</a>
-      <a class="top-link" href="{{ url_for('main.games') }}">Starta ny Sudoku</a>
+      <a class="top-link" href="{{ url_for('main.games') }}">Ny Sudoku</a>
+      <a class="top-link" href="{{ url_for('main.leaderboard') }}">Topplista</a>
     </p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -112,27 +93,20 @@
       {% for game in games %}
         <article class="game">
           <div class="game-head">
-            <h3><a class="load-link" href="{{ url_for('main.builder', game_id=game.id) }}">{{ game.difficulty|capitalize }}: {{ game.title }}</a></h3>
-            <div style="display:flex;gap:8px;">
-              <a class="load-btn" href="{{ url_for('main.builder', game_id=game.id) }}">Ladda spel</a>
-              <form method="post" action="{{ url_for('main.delete_ongoing_game', game_id=game.id) }}" onsubmit="return confirm('Är du säker på att du vill radera pågående spel {{ game.title }}?')">
-                <button class="del-btn" type="submit">Radera</button>
-              </form>
-            </div>
+            <h3>{{ game.difficulty|capitalize }}: {{ game.title }}</h3>
+            <a class="view-link" href="{{ url_for('main.completed_game_detail', game_id=game.id) }}">Visa spel och ändringar</a>
           </div>
           <div class="meta">
-            <span>Skapad: {{ game.created_at }}</span>
+            <span>Avslutat: {{ game.completed_at }}</span>
+            <span>Tid: {{ game.elapsed_seconds|format_time }}</span>
           </div>
           <div class="meta">
             <span>Senast sparad: {{ game.updated_at }}</span>
           </div>
-          <div class="meta">
-            <span>Tid: {{ game.elapsed_seconds|format_time }}</span>
-          </div>
         </article>
       {% endfor %}
     {% else %}
-      <p class="empty">Inga pågående spel finns an.</p>
+      <p class="empty">Inga avslutade spel ännu.</p>
     {% endif %}
   </main>
 </body>

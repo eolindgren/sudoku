@@ -82,6 +82,53 @@
       color: #64748b;
       font-size: 0.95rem;
     }
+    .leaderboard-section {
+      margin-top: 24px;
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      background: #f8fffb;
+    }
+    .leaderboard-section h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: #14532d;
+    }
+    .leaderboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 10px 12px;
+      font-size: 0.94rem;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .leaderboard-item:hover {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
+    .leaderboard-rank {
+      font-weight: 700;
+      color: #166534;
+      min-width: 34px;
+    }
+    .leaderboard-main {
+      flex: 1;
+    }
+    .leaderboard-time {
+      font-weight: 700;
+      color: #14532d;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -89,13 +136,15 @@
     <h1>SUDOKU</h1>
     <div class="actions">
       <a class="btn secondary" href="{{ url_for('main.games') }}">Starta ny Sudoku</a>
-      <a class="btn secondary" href="{{ url_for('main.ongoing_games') }}">Visa pågående spel</a>
+      <a class="btn secondary" href="{{ url_for('main.ongoing_games') }}">Pågående spel</a>
+      <a class="btn secondary" href="{{ url_for('main.completed_games') }}">Avslutade</a>
+      <a class="btn secondary" href="{{ url_for('main.leaderboard') }}">Visa full topplista</a>
       <a class="btn" href="{{ url_for('main.builder') }}">Lägg in nytt Sudoku</a>
     </div>
 
     {% if ongoing_games %}
       <div class="ongoing-section">
-        <h2>Pågående spel</h2>
+        <h2>Senaste 10 sparade</h2>
         <div class="ongoing-list">
           {% for game in ongoing_games %}
             <a class="ongoing-item" href="{{ url_for('main.builder', game_id=game.id) }}">
@@ -106,6 +155,23 @@
         </div>
       </div>
     {% endif %}
+
+    <div class="leaderboard-section">
+      <h2>Topplista</h2>
+      {% if leaderboard %}
+        <div class="leaderboard-list">
+          {% for item in leaderboard %}
+            <a class="leaderboard-item" href="{{ url_for('main.completed_game_detail', game_id=item.ongoing_game_id) }}">
+              <div class="leaderboard-rank">#{{ loop.index }}</div>
+              <div class="leaderboard-main">{{ item.game_title }} ({{ item.difficulty|capitalize }})</div>
+              <div class="leaderboard-time">{{ item.elapsed_seconds|format_time }}</div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-ongoing">Ingen klar topptid ännu.</p>
+      {% endif %}
+    </div>
   </main>
 </body>
 </html>

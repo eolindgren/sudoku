@@ -82,6 +82,107 @@
       gap: 12px;
       flex-wrap: wrap;
     }
+    .logic-panel {
+      min-width: 190px;
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      background: #fafcff;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-self: flex-start;
+    }
+    .side-panels {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+      width: 290px;
+      flex: 0 0 290px;
+    }
+    .logic-title {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #334155;
+      font-weight: 700;
+    }
+    .logic-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .logic-result {
+      font-size: 0.85rem;
+      color: #475569;
+      min-height: 1.1rem;
+    }
+    .history-panel {
+      min-width: 0;
+      max-width: none;
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      background: #fafcff;
+      padding: 12px;
+      align-self: flex-start;
+    }
+    .logic-panel,
+    .history-panel {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .history-list {
+      list-style: none;
+      margin: 8px 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 90px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .history-item {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+    }
+    .history-item-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 5px;
+    }
+    .history-change {
+      font-size: 0.8rem;
+      color: #475569;
+      line-height: 1.25;
+      margin-top: 2px;
+    }
+    .history-hit {
+      font-size: 0.82rem;
+      color: #0f172a;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .history-empty {
+      font-size: 0.82rem;
+      color: #64748b;
+      padding: 4px 0;
+    }
+    .logic-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .logic-result {
+      font-size: 0.85rem;
+      color: #475569;
+      min-height: 1.1rem;
+    }
     .board {
       display: grid;
       grid-template-columns: repeat(9, 44px);
@@ -103,6 +204,34 @@
       background: #dbeafe;
       box-shadow: inset 0 0 0 2px #2563eb;
     }
+    .cell-wrap.naked-highlight {
+      background: #dcfce7;
+      box-shadow: inset 0 0 0 2px #16a34a;
+    }
+    .cell-wrap.y-wing-pivot {
+      background: #fef3c7;
+      box-shadow: inset 0 0 0 2px #d97706;
+    }
+    .cell-wrap.y-wing-wing {
+      background: #dbeafe;
+      box-shadow: inset 0 0 0 2px #2563eb;
+    }
+    .cell-wrap.y-wing-target {
+      background: #fee2e2;
+      box-shadow: inset 0 0 0 2px #dc2626;
+    }
+    .cell-wrap.xyz-wing-hinge {
+      background: #ede9fe;
+      box-shadow: inset 0 0 0 2px #7c3aed;
+    }
+    .cell-wrap.xyz-wing-wing {
+      background: #e0f2fe;
+      box-shadow: inset 0 0 0 2px #0284c7;
+    }
+    .cell-wrap.xyz-wing-target {
+      background: #ffedd5;
+      box-shadow: inset 0 0 0 2px #ea580c;
+    }
     .cell {
       position: absolute;
       inset: 0;
@@ -117,6 +246,17 @@
       padding: 0;
       z-index: 2;
       caret-color: transparent;
+    }
+    .cell.user-filled {
+      color: #2563eb;
+    }
+    .cell.logic-filled {
+      color: #166534;
+      font-weight: 700;
+    }
+    .cell.fixed-cell {
+      color: #111827;
+      font-weight: 700;
     }
     .note-display {
       position: absolute;
@@ -159,6 +299,12 @@
       font-weight: 700;
       cursor: pointer;
     }
+    .save-btn.secondary {
+      background: #0f766e;
+    }
+    .save-btn.secondary:hover {
+      background: #115e59;
+    }
     .timer {
       font-size: 1.3rem;
       font-weight: 700;
@@ -182,6 +328,12 @@
       margin-top: 16px;
       flex-wrap: wrap;
     }
+    .completion-message {
+      margin: 10px 0 0;
+      min-height: 1.2rem;
+      font-weight: 700;
+      color: #15803d;
+    }
     .mode-btn {
       border: 1px solid #94a3b8;
       border-radius: 10px;
@@ -199,6 +351,24 @@
       color: #fff;
       border-color: #1e293b;
     }
+    .logic-btn {
+      border: 1px solid #94a3b8;
+      border-radius: 10px;
+      padding: 11px 15px;
+      background: #f8fafc;
+      color: #1e293b;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .logic-btn:hover {
+      background: #e2e8f0;
+    }
+    @media (max-width: 900px) {
+      .side-panels {
+        width: 100%;
+        flex: 1 1 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -207,8 +377,8 @@
       <h1>{% if loaded_game %}Laddat spel {{ loaded_game.title }}{% else %}Nytt Sudoku-spel{% endif %}</h1>
       <div style="display:flex; align-items:center; gap:12px;">
         <a class="top-link" href="{{ url_for('main.index') }}">Startsida</a>
-        <a class="top-link" href="{{ url_for('main.games') }}">Grund-spel</a>
-        <a class="top-link" href="{{ url_for('main.ongoing_games') }}">Pågående spel</a>
+        <a class="top-link" href="{{ url_for('main.games') }}">Ny Sudoku</a>
+        <a class="top-link" href="{{ url_for('main.completed_games') }}">Avslutade</a>
       </div>
     </div>
 
@@ -231,10 +401,10 @@
       {% else %}
         <div class="meta">
           <select name="difficulty" required>
-            <option value="">Valj svarighet</option>
-            <option value="latt" {% if selected_difficulty == 'latt' %}selected{% endif %}>Latt</option>
+            <option value="">Välj svårighet</option>
+            <option value="latt" {% if selected_difficulty == 'latt' %}selected{% endif %}>Lätt</option>
             <option value="medel" {% if selected_difficulty == 'medel' %}selected{% endif %}>Medel</option>
-            <option value="svar" {% if selected_difficulty == 'svar' %}selected{% endif %}>Svar</option>
+            <option value="svar" {% if selected_difficulty == 'svar' %}selected{% endif %}>Svår</option>
             <option value="expert" {% if selected_difficulty == 'expert' %}selected{% endif %}>Expert</option>
           </select>
         </div>
@@ -272,7 +442,7 @@
                     value="{{ note_values[r][c] }}">
                 {% endif %}
                 <input
-                  class="cell"
+                  class="cell{% if fixed_cells[r][c] %} fixed-cell{% endif %}"
                   name="cell_{{ r }}_{{ c }}"
                   maxlength="1"
                   pattern="[1-9]"
@@ -280,6 +450,8 @@
                   autocomplete="off"
                   data-row="{{ r }}"
                   data-col="{{ c }}"
+                  data-fixed="{{ '1' if fixed_cells[r][c] else '0' }}"
+                  {% if fixed_cells[r][c] %}readonly{% endif %}
                   value="{{ grid_values[r][c] }}"
                   title="Ange 1-9 eller lamna tomt">
               </div>
@@ -287,13 +459,66 @@
           {% endfor %}
         </div>
 
+        <p class="completion-message" id="completion-message" aria-live="polite"></p>
+
         <div class="action-row">
-          <button class="save-btn" type="submit">{% if loaded_game and loaded_game.game_type == 'ongoing' %}Spara{% else %}Spara som nytt spel{% endif %}</button>
+          <button class="save-btn" type="submit" name="save_action" value="save">{% if loaded_game and loaded_game.game_type == 'ongoing' %}Spara{% else %}Spara som nytt spel{% endif %}</button>
           {% if loaded_game and loaded_game.game_type == 'ongoing' %}
+            <button class="save-btn secondary" type="submit" name="save_action" value="save_as">Spara som</button>
             <button class="mode-btn right" id="note-mode-btn" type="button">Anteckningar: Av</button>
           {% endif %}
         </div>
         </div>
+        {% if loaded_game and loaded_game.game_type == 'ongoing' %}
+          <div class="side-panels">
+            <aside class="logic-panel">
+              <p class="logic-title">Sudoku-logik</p>
+              <div class="logic-action">
+                <button class="logic-btn" id="fill-box-single-btn" type="button">Fyll 3x3-box</button>
+                <span class="logic-result" id="fill-box-single-result"></span>
+              </div>
+              <div class="logic-action">
+                <button class="logic-btn" id="naked-pairs-btn" type="button">Naked Pairs/Triples</button>
+                <span class="logic-result" id="naked-pairs-result"></span>
+              </div>
+              <div class="logic-action">
+                <button class="logic-btn" id="exclusion-btn" type="button">Fyll i anteckningar</button>
+                <span class="logic-result" id="exclusion-result"></span>
+              </div>
+              <div class="logic-action">
+                <button class="logic-btn" id="fill-all-notes-btn" type="button">Fyll alla anteckningar</button>
+                <span class="logic-result" id="fill-all-notes-result"></span>
+              </div>
+              <div class="logic-action">
+                <button class="logic-btn" id="fill-from-notes-btn" type="button">Fyll från enkel anteckning</button>
+                <span class="logic-result" id="fill-from-notes-result"></span>
+              </div>
+              <div class="logic-action">
+                <button class="logic-btn" id="single-candidate-btn" type="button">Fyll enkla värden</button>
+                <span class="logic-result" id="single-candidate-result"></span>
+              </div>
+              <div class="logic-action">
+                <button class="logic-btn" id="cross-hatching-btn" type="button">Skanning/Cross-hatching</button>
+                <span class="logic-result" id="cross-hatching-result"></span>
+              </div>
+              <div class="logic-action">
+                <button class="logic-btn" id="y-wing-btn" type="button">Y-vinge</button>
+                <span class="logic-result" id="y-wing-result"></span>
+              </div>
+              <div class="logic-action">
+                <button class="logic-btn" id="xyz-wing-btn" type="button">XYZ-vinge</button>
+                <span class="logic-result" id="xyz-wing-result"></span>
+              </div>
+            </aside>
+
+            <aside class="history-panel">
+              <p class="logic-title">Ändringshistorik</p>
+              <ul class="history-list" id="logic-history-list">
+                <li class="history-empty" id="logic-history-empty">Inga logikändringar ännu.</li>
+              </ul>
+            </aside>
+          </div>
+        {% endif %}
       </div>
     </form>
   </main>
@@ -336,8 +561,36 @@
       var cells = Array.from(document.querySelectorAll('.cell'));
       var noteInputs = Array.from(document.querySelectorAll('.note-input'));
       var noteModeBtn = document.getElementById('note-mode-btn');
+      var fillBoxSingleBtn = document.getElementById('fill-box-single-btn');
+      var fillBoxSingleResult = document.getElementById('fill-box-single-result');
+      var nakedPairsBtn = document.getElementById('naked-pairs-btn');
+      var nakedPairsResult = document.getElementById('naked-pairs-result');
+      var exclusionBtn = document.getElementById('exclusion-btn');
+      var exclusionResult = document.getElementById('exclusion-result');
+      var fillAllNotesBtn = document.getElementById('fill-all-notes-btn');
+      var fillAllNotesResult = document.getElementById('fill-all-notes-result');
+      var fillFromNotesBtn = document.getElementById('fill-from-notes-btn');
+      var fillFromNotesResult = document.getElementById('fill-from-notes-result');
+      var singleCandidateBtn = document.getElementById('single-candidate-btn');
+      var singleCandidateResult = document.getElementById('single-candidate-result');
+      var crossHatchingBtn = document.getElementById('cross-hatching-btn');
+      var crossHatchingResult = document.getElementById('cross-hatching-result');
+      var yWingBtn = document.getElementById('y-wing-btn');
+      var yWingResult = document.getElementById('y-wing-result');
+      var xyzWingBtn = document.getElementById('xyz-wing-btn');
+      var xyzWingResult = document.getElementById('xyz-wing-result');
+      var logicHistoryList = document.getElementById('logic-history-list');
+      var logicHistoryEmpty = document.getElementById('logic-history-empty');
+      var completionMessage = document.getElementById('completion-message');
       var noteMode = false;
       var selectedCell = null;
+      var seenNakedHitKeys = new Set();
+      var lastNakedSearchState = '';
+      var seenYWingHitKeys = new Set();
+      var lastYWingSearchState = '';
+      var seenXYZWingHitKeys = new Set();
+      var lastXYZWingSearchState = '';
+      var wasSolved = false;
 
       function normalizeNotes(value) {
         return Array.from(new Set(value.split('').filter(function (ch) {
@@ -389,6 +642,71 @@
         });
       }
 
+      function refreshCellStyle(cell) {
+        var isFixed = cell.dataset.fixed === '1';
+        var isLogicFilled = cell.dataset.logicFilled === '1';
+        cell.classList.toggle('logic-filled', !!cell.value && !isFixed && isLogicFilled);
+        cell.classList.toggle('user-filled', !!cell.value && !isFixed && !isLogicFilled);
+      }
+
+      function demoteExistingLogicFilled() {
+        cells.forEach(function (cell) {
+          if (!cell || cell.dataset.fixed === '1') {
+            return;
+          }
+          if (cell.dataset.logicFilled === '1' && cell.value) {
+            cell.dataset.logicFilled = '0';
+            refreshCellStyle(cell);
+          }
+        });
+      }
+
+      function appendLogicHistory(actionName, hitText, changes) {
+        if (!logicHistoryList) {
+          return;
+        }
+
+        if (Array.isArray(hitText) && changes === undefined) {
+          changes = hitText;
+          hitText = '';
+        }
+
+        if ((!changes || changes.length === 0) && !hitText) {
+          return;
+        }
+
+        if (logicHistoryEmpty) {
+          logicHistoryEmpty.remove();
+          logicHistoryEmpty = null;
+        }
+
+        var item = document.createElement('li');
+        item.className = 'history-item';
+
+        var title = document.createElement('div');
+        title.className = 'history-item-title';
+        title.textContent = actionName;
+        item.appendChild(title);
+
+        if (hitText) {
+          var hit = document.createElement('div');
+          hit.className = 'history-hit';
+          hit.textContent = hitText;
+          item.appendChild(hit);
+        }
+
+        if (changes && changes.length > 0) {
+          changes.forEach(function (changeText) {
+            var line = document.createElement('div');
+            line.className = 'history-change';
+            line.textContent = changeText;
+            item.appendChild(line);
+          });
+        }
+
+        logicHistoryList.prepend(item);
+      }
+
       function selectCell(cell) {
         cells.forEach(function (item) {
           item.parentElement.classList.remove('selected');
@@ -405,6 +723,984 @@
         }
       }
 
+      function findCell(row, col) {
+        return document.querySelector('.cell[data-row="' + row + '"][data-col="' + col + '"]');
+      }
+
+      function getCellKey(cell) {
+        if (!cell) {
+          return '';
+        }
+        return cell.dataset.row + ',' + cell.dataset.col;
+      }
+
+      function formatCellLabel(cell) {
+        return 'rad ' + (Number(cell.dataset.row) + 1) + ', kol ' + (Number(cell.dataset.col) + 1);
+      }
+
+      function cellsSeeEachOther(first, second) {
+        if (!first || !second || first === second) {
+          return false;
+        }
+
+        var rowA = Number(first.dataset.row);
+        var colA = Number(first.dataset.col);
+        var rowB = Number(second.dataset.row);
+        var colB = Number(second.dataset.col);
+
+        if (rowA === rowB || colA === colB) {
+          return true;
+        }
+
+        return Math.floor(rowA / 3) === Math.floor(rowB / 3) && Math.floor(colA / 3) === Math.floor(colB / 3);
+      }
+
+      function getPeerCellMap(cell) {
+        var peerMap = new Map();
+        if (!cell) {
+          return peerMap;
+        }
+
+        var row = Number(cell.dataset.row);
+        var col = Number(cell.dataset.col);
+
+        for (var c = 0; c < 9; c += 1) {
+          if (c === col) {
+            continue;
+          }
+          var rowPeer = findCell(row, c);
+          if (rowPeer) {
+            peerMap.set(getCellKey(rowPeer), rowPeer);
+          }
+        }
+
+        for (var r = 0; r < 9; r += 1) {
+          if (r === row) {
+            continue;
+          }
+          var colPeer = findCell(r, col);
+          if (colPeer) {
+            peerMap.set(getCellKey(colPeer), colPeer);
+          }
+        }
+
+        var boxStartRow = Math.floor(row / 3) * 3;
+        var boxStartCol = Math.floor(col / 3) * 3;
+        for (var rr = boxStartRow; rr < boxStartRow + 3; rr += 1) {
+          for (var cc = boxStartCol; cc < boxStartCol + 3; cc += 1) {
+            if (rr === row && cc === col) {
+              continue;
+            }
+            var boxPeer = findCell(rr, cc);
+            if (boxPeer) {
+              peerMap.set(getCellKey(boxPeer), boxPeer);
+            }
+          }
+        }
+
+        return peerMap;
+      }
+
+      function clearNakedHighlights() {
+        document.querySelectorAll('.cell-wrap.naked-highlight').forEach(function (wrap) {
+          wrap.classList.remove('naked-highlight');
+        });
+      }
+
+      function buildWingHitKey(kind, hingeOrPivot, wA, wB, sharedDigit) {
+        var positions = [hingeOrPivot, wA, wB].map(function (cell) {
+          return (Number(cell.dataset.row) + 1) + ',' + (Number(cell.dataset.col) + 1);
+        }).sort().join('|');
+        return kind + '::' + sharedDigit + '::' + positions;
+      }
+
+      function clearYWingHighlights() {
+        document.querySelectorAll('.cell-wrap.y-wing-pivot, .cell-wrap.y-wing-wing, .cell-wrap.y-wing-target').forEach(function (wrap) {
+          wrap.classList.remove('y-wing-pivot', 'y-wing-wing', 'y-wing-target');
+        });
+      }
+
+      function clearXYZWingHighlights() {
+        document.querySelectorAll('.cell-wrap.xyz-wing-hinge, .cell-wrap.xyz-wing-wing, .cell-wrap.xyz-wing-target').forEach(function (wrap) {
+          wrap.classList.remove('xyz-wing-hinge', 'xyz-wing-wing', 'xyz-wing-target');
+        });
+      }
+
+      function markYWingHighlights(result) {
+        clearYWingHighlights();
+        if (!result) {
+          return;
+        }
+
+        var pivotCell = findCell(result.pivot.row - 1, result.pivot.col - 1);
+        if (pivotCell && pivotCell.parentElement) {
+          pivotCell.parentElement.classList.add('y-wing-pivot');
+        }
+
+        var wingACell = findCell(result.wingA.row - 1, result.wingA.col - 1);
+        if (wingACell && wingACell.parentElement) {
+          wingACell.parentElement.classList.add('y-wing-wing');
+        }
+
+        var wingBCell = findCell(result.wingB.row - 1, result.wingB.col - 1);
+        if (wingBCell && wingBCell.parentElement) {
+          wingBCell.parentElement.classList.add('y-wing-wing');
+        }
+
+        result.removals.forEach(function (item) {
+          var targetCell = findCell(item.row - 1, item.col - 1);
+          if (targetCell && targetCell.parentElement) {
+            targetCell.parentElement.classList.add('y-wing-target');
+          }
+        });
+      }
+
+      function markXYZWingHighlights(result) {
+        clearXYZWingHighlights();
+        if (!result) {
+          return;
+        }
+
+        var hingeCell = findCell(result.hinge.row - 1, result.hinge.col - 1);
+        if (hingeCell && hingeCell.parentElement) {
+          hingeCell.parentElement.classList.add('xyz-wing-hinge');
+        }
+
+        var wingACell = findCell(result.wingA.row - 1, result.wingA.col - 1);
+        if (wingACell && wingACell.parentElement) {
+          wingACell.parentElement.classList.add('xyz-wing-wing');
+        }
+
+        var wingBCell = findCell(result.wingB.row - 1, result.wingB.col - 1);
+        if (wingBCell && wingBCell.parentElement) {
+          wingBCell.parentElement.classList.add('xyz-wing-wing');
+        }
+
+        result.removals.forEach(function (item) {
+          var targetCell = findCell(item.row - 1, item.col - 1);
+          if (targetCell && targetCell.parentElement) {
+            targetCell.parentElement.classList.add('xyz-wing-target');
+          }
+        });
+      }
+
+      function candidateArray(cell) {
+        return getCellCandidates(cell).split('');
+      }
+
+      function intersectionDigits(first, second) {
+        return first.filter(function (digit) {
+          return second.indexOf(digit) !== -1;
+        });
+      }
+
+      function isSubsetDigits(subset, superset) {
+        return subset.every(function (digit) {
+          return superset.indexOf(digit) !== -1;
+        });
+      }
+
+      function allInSameUnit(first, second, third) {
+        var rowA = Number(first.dataset.row);
+        var rowB = Number(second.dataset.row);
+        var rowC = Number(third.dataset.row);
+        if (rowA === rowB && rowB === rowC) {
+          return true;
+        }
+
+        var colA = Number(first.dataset.col);
+        var colB = Number(second.dataset.col);
+        var colC = Number(third.dataset.col);
+        if (colA === colB && colB === colC) {
+          return true;
+        }
+
+        var boxRowA = Math.floor(rowA / 3);
+        var boxRowB = Math.floor(rowB / 3);
+        var boxRowC = Math.floor(rowC / 3);
+        var boxColA = Math.floor(colA / 3);
+        var boxColB = Math.floor(colB / 3);
+        var boxColC = Math.floor(colC / 3);
+
+        return boxRowA === boxRowB && boxRowB === boxRowC && boxColA === boxColB && boxColB === boxColC;
+      }
+
+      function getCellCandidates(cell) {
+        if (!cell || cell.value) {
+          return '';
+        }
+        var noteInput = getNoteInput(cell.dataset.row, cell.dataset.col);
+        return noteInput ? normalizeNotes(noteInput.value) : '';
+      }
+
+      function removeCandidatesFromCell(cell, digitsToRemove) {
+        if (!cell || cell.value) {
+          return { removedCount: 0, removedDigits: '' };
+        }
+
+        var noteInput = getNoteInput(cell.dataset.row, cell.dataset.col);
+        if (!noteInput) {
+          return { removedCount: 0, removedDigits: '' };
+        }
+
+        var before = normalizeNotes(noteInput.value);
+        var removedDigits = before.split('').filter(function (d) {
+          return digitsToRemove.indexOf(d) !== -1;
+        }).join('');
+        var after = before.split('').filter(function (d) {
+          return digitsToRemove.indexOf(d) === -1;
+        }).join('');
+
+        if (after === before) {
+          return { removedCount: 0, removedDigits: '' };
+        }
+
+        noteInput.value = after;
+        refreshNoteDisplay(cell);
+        return {
+          removedCount: before.length - after.length,
+          removedDigits: removedDigits,
+        };
+      }
+
+      function getAllUnits() {
+        var units = [];
+
+        for (var r = 0; r < 9; r += 1) {
+          var rowCells = [];
+          for (var c = 0; c < 9; c += 1) {
+            rowCells.push(findCell(r, c));
+          }
+          units.push({ type: 'row', label: 'rad ' + (r + 1), cells: rowCells });
+        }
+
+        for (var c2 = 0; c2 < 9; c2 += 1) {
+          var colCells = [];
+          for (var r2 = 0; r2 < 9; r2 += 1) {
+            colCells.push(findCell(r2, c2));
+          }
+          units.push({ type: 'col', label: 'kolumn ' + (c2 + 1), cells: colCells });
+        }
+
+        for (var boxR = 0; boxR < 3; boxR += 1) {
+          for (var boxC = 0; boxC < 3; boxC += 1) {
+            var boxCells = [];
+            for (var rr = boxR * 3; rr < boxR * 3 + 3; rr += 1) {
+              for (var cc = boxC * 3; cc < boxC * 3 + 3; cc += 1) {
+                boxCells.push(findCell(rr, cc));
+              }
+            }
+            units.push({
+              type: 'box',
+              label: 'box (' + (boxR * 3 + 1) + '-' + (boxR * 3 + 3) + ', ' + (boxC * 3 + 1) + '-' + (boxC * 3 + 3) + ')',
+              cells: boxCells,
+            });
+          }
+        }
+
+        return units;
+      }
+
+      function getBoardStateSignature() {
+        var cellState = cells.map(function (cell) {
+          return cell.value || '.';
+        }).join('');
+
+        var noteState = noteInputs.map(function (input) {
+          return normalizeNotes(input.value);
+        }).join('|');
+
+        return cellState + '::' + noteState;
+      }
+
+      function buildNakedHitKey(unitLabel, digits, matchedCells) {
+        var positions = matchedCells.map(function (cell) {
+          return (Number(cell.dataset.row) + 1) + ',' + (Number(cell.dataset.col) + 1);
+        }).sort().join('|');
+        return unitLabel + '::' + digits + '::' + positions;
+      }
+
+      function isCompleteUnit(values) {
+        if (values.length !== 9) {
+          return false;
+        }
+        var seen = new Set();
+        for (var i = 0; i < values.length; i += 1) {
+          var value = values[i];
+          if ('123456789'.indexOf(value) === -1 || seen.has(value)) {
+            return false;
+          }
+          seen.add(value);
+        }
+        return true;
+      }
+
+      function isBoardSolved() {
+        for (var r = 0; r < 9; r += 1) {
+          var rowValues = [];
+          for (var c = 0; c < 9; c += 1) {
+            var rowCell = findCell(r, c);
+            rowValues.push(rowCell ? (rowCell.value || '').trim() : '');
+          }
+          if (!isCompleteUnit(rowValues)) {
+            return false;
+          }
+        }
+
+        for (var c2 = 0; c2 < 9; c2 += 1) {
+          var colValues = [];
+          for (var r2 = 0; r2 < 9; r2 += 1) {
+            var colCell = findCell(r2, c2);
+            colValues.push(colCell ? (colCell.value || '').trim() : '');
+          }
+          if (!isCompleteUnit(colValues)) {
+            return false;
+          }
+        }
+
+        for (var boxR = 0; boxR < 3; boxR += 1) {
+          for (var boxC = 0; boxC < 3; boxC += 1) {
+            var boxValues = [];
+            for (var rr = boxR * 3; rr < boxR * 3 + 3; rr += 1) {
+              for (var cc = boxC * 3; cc < boxC * 3 + 3; cc += 1) {
+                var boxCell = findCell(rr, cc);
+                boxValues.push(boxCell ? (boxCell.value || '').trim() : '');
+              }
+            }
+            if (!isCompleteUnit(boxValues)) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+      }
+
+      function updateSolvedState() {
+        if (!completionMessage) {
+          return;
+        }
+        var solved = isBoardSolved();
+        if (solved) {
+          completionMessage.textContent = 'Klar! Hela spelplanen är korrekt ifylld.';
+        } else if (wasSolved) {
+          completionMessage.textContent = '';
+        }
+        wasSolved = solved;
+      }
+
+      function applyNakedPairsTriples(excludedHitKeys) {
+        clearNakedHighlights();
+        var blocked = excludedHitKeys || new Set();
+
+        var units = getAllUnits();
+        for (var u = 0; u < units.length; u += 1) {
+          var unit = units[u];
+          var groups = {};
+
+          unit.cells.forEach(function (cell) {
+            var candidates = getCellCandidates(cell);
+            if (candidates.length !== 2 && candidates.length !== 3) {
+              return;
+            }
+            if (!groups[candidates]) {
+              groups[candidates] = [];
+            }
+            groups[candidates].push(cell);
+          });
+
+          var signatures = Object.keys(groups);
+          for (var s = 0; s < signatures.length; s += 1) {
+            var sig = signatures[s];
+            var size = sig.length;
+            var matchedCells = groups[sig];
+            if ((size !== 2 && size !== 3) || matchedCells.length !== size) {
+              continue;
+            }
+
+            var hitKey = buildNakedHitKey(unit.label, sig, matchedCells);
+            if (blocked.has(hitKey)) {
+              continue;
+            }
+
+            var removedCount = 0;
+            var digits = sig.split('');
+            var removals = [];
+            unit.cells.forEach(function (cell) {
+              if (!cell || matchedCells.indexOf(cell) !== -1) {
+                return;
+              }
+              var removal = removeCandidatesFromCell(cell, digits);
+              removedCount += removal.removedCount;
+              if (removal.removedCount > 0) {
+                removals.push({
+                  row: Number(cell.dataset.row) + 1,
+                  col: Number(cell.dataset.col) + 1,
+                  removed: removal.removedDigits,
+                });
+              }
+            });
+
+            matchedCells.forEach(function (cell) {
+              if (cell && cell.parentElement) {
+                cell.parentElement.classList.add('naked-highlight');
+              }
+            });
+
+            return {
+              kind: size === 2 ? 'naket par' : 'naken trippel',
+              unitLabel: unit.label,
+              digits: digits.join(', '),
+              hitKey: hitKey,
+              removedCount: removedCount,
+              removals: removals,
+            };
+          }
+        }
+
+        return null;
+      }
+
+      function applyYWing(excludedHitKeys) {
+        var blocked = excludedHitKeys || new Set();
+        var biValueCells = cells.filter(function (cell) {
+          return cell && !cell.value && getCellCandidates(cell).length === 2;
+        });
+
+        for (var p = 0; p < biValueCells.length; p += 1) {
+          var pivot = biValueCells[p];
+          var pivotCandidates = getCellCandidates(pivot).split('');
+          if (pivotCandidates.length !== 2) {
+            continue;
+          }
+
+          var pivotA = pivotCandidates[0];
+          var pivotB = pivotCandidates[1];
+
+          var wingA = biValueCells.filter(function (cell) {
+            if (cell === pivot || !cellsSeeEachOther(cell, pivot)) {
+              return false;
+            }
+            var candidateText = getCellCandidates(cell);
+            return candidateText.indexOf(pivotA) !== -1 && candidateText.indexOf(pivotB) === -1;
+          });
+
+          var wingB = biValueCells.filter(function (cell) {
+            if (cell === pivot || !cellsSeeEachOther(cell, pivot)) {
+              return false;
+            }
+            var candidateText = getCellCandidates(cell);
+            return candidateText.indexOf(pivotB) !== -1 && candidateText.indexOf(pivotA) === -1;
+          });
+
+          for (var w1 = 0; w1 < wingA.length; w1 += 1) {
+            var firstWing = wingA[w1];
+            var firstCandidates = getCellCandidates(firstWing).split('');
+            var firstOther = firstCandidates.find(function (d) {
+              return d !== pivotA;
+            });
+            if (!firstOther) {
+              continue;
+            }
+
+            for (var w2 = 0; w2 < wingB.length; w2 += 1) {
+              var secondWing = wingB[w2];
+              if (secondWing === firstWing) {
+                continue;
+              }
+
+              var secondCandidates = getCellCandidates(secondWing).split('');
+              var secondOther = secondCandidates.find(function (d) {
+                return d !== pivotB;
+              });
+              if (!secondOther || secondOther !== firstOther) {
+                continue;
+              }
+
+              var sharedDigit = firstOther;
+              var firstPeers = getPeerCellMap(firstWing);
+              var secondPeers = getPeerCellMap(secondWing);
+              var removals = [];
+
+              firstPeers.forEach(function (candidateCell, key) {
+                if (!secondPeers.has(key)) {
+                  return;
+                }
+                if (!candidateCell || candidateCell.value) {
+                  return;
+                }
+                if (candidateCell === pivot || candidateCell === firstWing || candidateCell === secondWing) {
+                  return;
+                }
+
+                var removal = removeCandidatesFromCell(candidateCell, [sharedDigit]);
+                if (removal.removedCount > 0) {
+                  removals.push({
+                    row: Number(candidateCell.dataset.row) + 1,
+                    col: Number(candidateCell.dataset.col) + 1,
+                    removed: removal.removedDigits,
+                  });
+                }
+              });
+
+              var yHitKey = buildWingHitKey('ywing', pivot, firstWing, secondWing, sharedDigit);
+              if (blocked.has(yHitKey)) {
+                continue;
+              }
+
+              if (removals.length > 0) {
+                return {
+                  hitKey: yHitKey,
+                  pivot: {
+                    row: Number(pivot.dataset.row) + 1,
+                    col: Number(pivot.dataset.col) + 1,
+                    notes: pivotCandidates.join(''),
+                  },
+                  wingA: {
+                    row: Number(firstWing.dataset.row) + 1,
+                    col: Number(firstWing.dataset.col) + 1,
+                    notes: firstCandidates.join(''),
+                  },
+                  wingB: {
+                    row: Number(secondWing.dataset.row) + 1,
+                    col: Number(secondWing.dataset.col) + 1,
+                    notes: secondCandidates.join(''),
+                  },
+                  sharedDigit: sharedDigit,
+                  removals: removals,
+                };
+              }
+            }
+          }
+        }
+
+        return null;
+      }
+
+      function applyXYZWing(excludedHitKeys) {
+        var blocked = excludedHitKeys || new Set();
+        var triValueCells = cells.filter(function (cell) {
+          return cell && !cell.value && getCellCandidates(cell).length === 3;
+        });
+
+        var biValueCells = cells.filter(function (cell) {
+          return cell && !cell.value && getCellCandidates(cell).length === 2;
+        });
+
+        for (var h = 0; h < triValueCells.length; h += 1) {
+          var hinge = triValueCells[h];
+          var hingeDigits = candidateArray(hinge);
+          if (hingeDigits.length !== 3) {
+            continue;
+          }
+
+          var wingCandidates = biValueCells.filter(function (cell) {
+            if (cell === hinge || !cellsSeeEachOther(cell, hinge)) {
+              return false;
+            }
+            var wingDigits = candidateArray(cell);
+            return wingDigits.length === 2 && isSubsetDigits(wingDigits, hingeDigits);
+          });
+
+          for (var a = 0; a < wingCandidates.length; a += 1) {
+            for (var b = a + 1; b < wingCandidates.length; b += 1) {
+              var wingA = wingCandidates[a];
+              var wingB = wingCandidates[b];
+
+              if (allInSameUnit(hinge, wingA, wingB)) {
+                continue;
+              }
+
+              var wingADigits = candidateArray(wingA);
+              var wingBDigits = candidateArray(wingB);
+              var commonDigits = intersectionDigits(wingADigits, wingBDigits);
+
+              if (commonDigits.length !== 1) {
+                continue;
+              }
+
+              var commonDigit = commonDigits[0];
+              var wingAOther = wingADigits.find(function (digit) {
+                return digit !== commonDigit;
+              });
+              var wingBOther = wingBDigits.find(function (digit) {
+                return digit !== commonDigit;
+              });
+
+              if (!wingAOther || !wingBOther || wingAOther === wingBOther) {
+                continue;
+              }
+
+              var unionDigits = Array.from(new Set(hingeDigits.concat(wingADigits, wingBDigits)));
+              if (unionDigits.length !== 3) {
+                continue;
+              }
+
+              var hingePeers = getPeerCellMap(hinge);
+              var wingAPeers = getPeerCellMap(wingA);
+              var wingBPeers = getPeerCellMap(wingB);
+              var removals = [];
+
+              hingePeers.forEach(function (targetCell, key) {
+                if (!wingAPeers.has(key) || !wingBPeers.has(key)) {
+                  return;
+                }
+                if (!targetCell || targetCell.value) {
+                  return;
+                }
+                if (targetCell === hinge || targetCell === wingA || targetCell === wingB) {
+                  return;
+                }
+
+                var removal = removeCandidatesFromCell(targetCell, [commonDigit]);
+                if (removal.removedCount > 0) {
+                  removals.push({
+                    row: Number(targetCell.dataset.row) + 1,
+                    col: Number(targetCell.dataset.col) + 1,
+                    removed: removal.removedDigits,
+                  });
+                }
+              });
+
+              var xyzHitKey = buildWingHitKey('xyzwing', hinge, wingA, wingB, commonDigit);
+              if (blocked.has(xyzHitKey)) {
+                continue;
+              }
+
+              if (removals.length > 0) {
+                return {
+                  hitKey: xyzHitKey,
+                  hinge: {
+                    row: Number(hinge.dataset.row) + 1,
+                    col: Number(hinge.dataset.col) + 1,
+                    notes: hingeDigits.join(''),
+                  },
+                  wingA: {
+                    row: Number(wingA.dataset.row) + 1,
+                    col: Number(wingA.dataset.col) + 1,
+                    notes: wingADigits.join(''),
+                  },
+                  wingB: {
+                    row: Number(wingB.dataset.row) + 1,
+                    col: Number(wingB.dataset.col) + 1,
+                    notes: wingBDigits.join(''),
+                  },
+                  commonDigit: commonDigit,
+                  removals: removals,
+                };
+              }
+            }
+          }
+        }
+
+        return null;
+      }
+
+      function getUsedDigitsInUnit(row, col) {
+        var used = new Set();
+
+        for (var c = 0; c < 9; c += 1) {
+          var rowCell = findCell(row, c);
+          if (rowCell && rowCell.value && '123456789'.indexOf(rowCell.value) !== -1) {
+            used.add(rowCell.value);
+          }
+        }
+
+        for (var r = 0; r < 9; r += 1) {
+          var colCell = findCell(r, col);
+          if (colCell && colCell.value && '123456789'.indexOf(colCell.value) !== -1) {
+            used.add(colCell.value);
+          }
+        }
+
+        var boxStartRow = Math.floor(row / 3) * 3;
+        var boxStartCol = Math.floor(col / 3) * 3;
+        for (var rr = boxStartRow; rr < boxStartRow + 3; rr += 1) {
+          for (var cc = boxStartCol; cc < boxStartCol + 3; cc += 1) {
+            var boxCell = findCell(rr, cc);
+            if (boxCell && boxCell.value && '123456789'.indexOf(boxCell.value) !== -1) {
+              used.add(boxCell.value);
+            }
+          }
+        }
+
+        return used;
+      }
+
+      function applyExclusionMethodToSelectedCell() {
+        if (!selectedCell) {
+          return { ok: false, message: 'Markera en cell först' };
+        }
+
+        if (selectedCell.dataset.fixed === '1') {
+          return { ok: false, message: 'Grundvärde kan inte ändras' };
+        }
+
+        if (selectedCell.value) {
+          return { ok: false, message: 'Cellen är redan ifylld' };
+        }
+
+        var row = Number(selectedCell.dataset.row);
+        var col = Number(selectedCell.dataset.col);
+        var noteInput = getNoteInput(row, col);
+        if (!noteInput) {
+          return { ok: false, message: 'Anteckningar saknas för cellen' };
+        }
+
+        var used = getUsedDigitsInUnit(row, col);
+        var before = normalizeNotes(noteInput.value);
+        var allowed = '123456789'.split('').filter(function (d) {
+          return !used.has(d);
+        }).join('');
+
+        noteInput.value = allowed;
+        refreshNoteDisplay(selectedCell);
+
+        return {
+          ok: true,
+          row: row + 1,
+          col: col + 1,
+          before: before,
+          allowed: allowed || '-',
+          changed: before !== allowed,
+        };
+      }
+
+      function fillNotesForAllCells() {
+        var updates = [];
+
+        cells.forEach(function (cell) {
+          if (!cell || cell.value || cell.dataset.fixed === '1') {
+            return;
+          }
+
+          var row = Number(cell.dataset.row);
+          var col = Number(cell.dataset.col);
+          var noteInput = getNoteInput(row, col);
+          if (!noteInput) {
+            return;
+          }
+
+          var before = normalizeNotes(noteInput.value);
+          var used = getUsedDigitsInUnit(row, col);
+          var allowed = '123456789'.split('').filter(function (d) {
+            return !used.has(d);
+          }).join('');
+
+          noteInput.value = allowed;
+          refreshNoteDisplay(cell);
+
+          if (before !== allowed) {
+            updates.push({
+              row: row + 1,
+              col: col + 1,
+              before: before || '-',
+              after: allowed || '-',
+            });
+          }
+        });
+
+        return updates;
+      }
+
+      function fillFromSingleNotes() {
+        var fills = [];
+
+        cells.forEach(function (cell) {
+          if (!cell || cell.value || cell.dataset.fixed === '1') {
+            return;
+          }
+
+          var row = Number(cell.dataset.row);
+          var col = Number(cell.dataset.col);
+          var noteInput = getNoteInput(row, col);
+          if (!noteInput) {
+            return;
+          }
+
+          var notes = normalizeNotes(noteInput.value);
+          if (notes.length !== 1) {
+            return;
+          }
+
+          var value = notes;
+          cell.value = value;
+          cell.dataset.logicFilled = '1';
+          refreshCellStyle(cell);
+
+          noteInput.value = '';
+          refreshNoteDisplay(cell);
+
+          fills.push({ row: row + 1, col: col + 1, value: value });
+        });
+
+        return fills;
+      }
+
+      function fillSingleCandidatesAllCells() {
+        var fills = [];
+
+        cells.forEach(function (cell) {
+          if (!cell || cell.value || cell.dataset.fixed === '1') {
+            return;
+          }
+
+          var row = Number(cell.dataset.row);
+          var col = Number(cell.dataset.col);
+          var used = getUsedDigitsInUnit(row, col);
+          var allowed = '123456789'.split('').filter(function (d) {
+            return !used.has(d);
+          });
+
+          if (allowed.length !== 1) {
+            return;
+          }
+
+          var value = allowed[0];
+          cell.value = value;
+          cell.dataset.logicFilled = '1';
+          refreshCellStyle(cell);
+
+          var noteInput = getNoteInput(row, col);
+          if (noteInput) {
+            noteInput.value = '';
+          }
+          refreshNoteDisplay(cell);
+
+          fills.push({ row: row + 1, col: col + 1, value: value });
+        });
+
+        return fills;
+      }
+
+      function fillByCrossHatching() {
+        var fills = [];
+
+        for (var boxR = 0; boxR < 3; boxR += 1) {
+          for (var boxC = 0; boxC < 3; boxC += 1) {
+            var boxCells = [];
+            var present = new Set();
+
+            for (var r = boxR * 3; r < boxR * 3 + 3; r += 1) {
+              for (var c = boxC * 3; c < boxC * 3 + 3; c += 1) {
+                var cell = findCell(r, c);
+                if (!cell) {
+                  continue;
+                }
+                boxCells.push(cell);
+                if (cell.value && '123456789'.indexOf(cell.value) !== -1) {
+                  present.add(cell.value);
+                }
+              }
+            }
+
+            for (var d = 1; d <= 9; d += 1) {
+              var digit = String(d);
+              if (present.has(digit)) {
+                continue;
+              }
+
+              var candidates = [];
+              boxCells.forEach(function (cell) {
+                if (!cell || cell.value || cell.dataset.fixed === '1') {
+                  return;
+                }
+                var row = Number(cell.dataset.row);
+                var col = Number(cell.dataset.col);
+                var used = getUsedDigitsInUnit(row, col);
+                if (!used.has(digit)) {
+                  candidates.push(cell);
+                }
+              });
+
+              if (candidates.length !== 1) {
+                continue;
+              }
+
+              var target = candidates[0];
+              target.value = digit;
+              target.dataset.logicFilled = '1';
+              refreshCellStyle(target);
+
+              var noteInput = getNoteInput(target.dataset.row, target.dataset.col);
+              if (noteInput) {
+                noteInput.value = '';
+              }
+              refreshNoteDisplay(target);
+
+              fills.push({
+                row: Number(target.dataset.row) + 1,
+                col: Number(target.dataset.col) + 1,
+                value: digit,
+              });
+            }
+          }
+        }
+
+        return fills;
+      }
+
+      function fillSingleMissingInBox() {
+        var digits = '123456789'.split('');
+
+        for (var boxR = 0; boxR < 3; boxR += 1) {
+          for (var boxC = 0; boxC < 3; boxC += 1) {
+            var seen = new Set();
+            var emptyCells = [];
+            var invalid = false;
+
+            for (var r = boxR * 3; r < boxR * 3 + 3; r += 1) {
+              for (var c = boxC * 3; c < boxC * 3 + 3; c += 1) {
+                var cell = findCell(r, c);
+                if (!cell) {
+                  continue;
+                }
+                var value = (cell.value || '').trim();
+                if (!value) {
+                  emptyCells.push(cell);
+                  continue;
+                }
+                if ('123456789'.indexOf(value) === -1 || seen.has(value)) {
+                  invalid = true;
+                  break;
+                }
+                seen.add(value);
+              }
+              if (invalid) {
+                break;
+              }
+            }
+
+            if (invalid || emptyCells.length !== 1 || seen.size !== 8) {
+              continue;
+            }
+
+            var missing = digits.find(function (d) { return !seen.has(d); });
+            if (!missing) {
+              continue;
+            }
+
+            var target = emptyCells[0];
+            target.value = missing;
+            target.dataset.logicFilled = '1';
+            refreshCellStyle(target);
+            var noteInput = getNoteInput(target.dataset.row, target.dataset.col);
+            if (noteInput) {
+              noteInput.value = '';
+            }
+            refreshNoteDisplay(target);
+            selectCell(target);
+            return {
+              row: Number(target.dataset.row) + 1,
+              col: Number(target.dataset.col) + 1,
+              value: missing,
+            };
+          }
+        }
+
+        return null;
+      }
+
       if (noteModeBtn) {
         noteModeBtn.addEventListener('click', function () {
           noteMode = !noteMode;
@@ -416,11 +1712,350 @@
         updateModeButton();
       }
 
+      if (fillBoxSingleBtn) {
+        fillBoxSingleBtn.addEventListener('click', function () {
+          var result = fillSingleMissingInBox();
+          if (!result) {
+            if (fillBoxSingleResult) {
+              fillBoxSingleResult.textContent = 'Ingen träff';
+            }
+            updateSolvedState();
+            return;
+          }
+
+          demoteExistingLogicFilled();
+          var hitCell = findCell(result.row - 1, result.col - 1);
+          if (hitCell) {
+            hitCell.dataset.logicFilled = '1';
+            refreshCellStyle(hitCell);
+          }
+
+          if (fillBoxSingleResult) {
+            fillBoxSingleResult.textContent = 'Rad ' + result.row + ', kol ' + result.col + ' = ' + result.value;
+          }
+          appendLogicHistory('Fyll 3x3-box', 'Träff: rad ' + result.row + ', kol ' + result.col + ' = ' + result.value, [
+            'Rad ' + result.row + ', kol ' + result.col + ' sattes till ' + result.value,
+          ]);
+          updateSolvedState();
+        });
+      }
+
+      if (nakedPairsBtn) {
+        nakedPairsBtn.addEventListener('click', function () {
+          var stateBefore = getBoardStateSignature();
+          if (stateBefore !== lastNakedSearchState) {
+            seenNakedHitKeys.clear();
+          }
+
+          var result = applyNakedPairsTriples(seenNakedHitKeys);
+          if (!nakedPairsResult) {
+            return;
+          }
+          if (!result) {
+            nakedPairsResult.textContent = seenNakedHitKeys.size > 0 ? 'Ingen ny träff' : 'Ingen träff';
+            lastNakedSearchState = stateBefore;
+            updateSolvedState();
+            return;
+          }
+
+          seenNakedHitKeys.add(result.hitKey);
+          lastNakedSearchState = getBoardStateSignature();
+
+          demoteExistingLogicFilled();
+          nakedPairsResult.textContent = result.kind + ' i ' + result.unitLabel + ' [' + result.digits + ']';
+
+          var historyChanges = result.removals.map(function (item) {
+            return 'Rad ' + item.row + ', kol ' + item.col + ': tog bort ' + item.removed;
+          });
+          if (historyChanges.length === 0) {
+            historyChanges.push(result.kind + ' i ' + result.unitLabel + ' markerades.');
+          }
+          appendLogicHistory(
+            'Naked Pairs/Triples',
+            'Träff: ' + result.kind + ' i ' + result.unitLabel + ' (' + result.digits + ')',
+            historyChanges
+          );
+          updateSolvedState();
+        });
+      }
+
+      if (exclusionBtn) {
+        exclusionBtn.addEventListener('click', function () {
+          var result = applyExclusionMethodToSelectedCell();
+          if (!exclusionResult) {
+            return;
+          }
+          if (!result.ok) {
+            exclusionResult.textContent = result.message;
+            updateSolvedState();
+            return;
+          }
+
+          demoteExistingLogicFilled();
+          exclusionResult.textContent = 'Rad ' + result.row + ', kol ' + result.col + ': ' + result.allowed;
+          if (result.changed) {
+            appendLogicHistory('Fyll i anteckningar', 'Träff: rad ' + result.row + ', kol ' + result.col, [
+              'Rad ' + result.row + ', kol ' + result.col + ': ' + (result.before || '-') + ' -> ' + result.allowed,
+            ]);
+          }
+          updateSolvedState();
+        });
+      }
+
+      if (fillAllNotesBtn) {
+        fillAllNotesBtn.addEventListener('click', function () {
+          var updates = fillNotesForAllCells();
+          if (!fillAllNotesResult) {
+            return;
+          }
+
+          if (updates.length === 0) {
+            fillAllNotesResult.textContent = 'Ingen ändring';
+            updateSolvedState();
+            return;
+          }
+
+          demoteExistingLogicFilled();
+
+          var preview = updates.slice(0, 2).map(function (item) {
+            return 'r' + item.row + 'k' + item.col;
+          }).join(', ');
+          var suffix = updates.length > 2 ? ' +' + (updates.length - 2) + ' till' : '';
+          fillAllNotesResult.textContent = updates.length + ' cell(er) uppdaterade: ' + preview + suffix;
+
+          appendLogicHistory('Fyll alla anteckningar', 'Träff: ' + updates.length + ' cell(er) med nya anteckningar', updates.map(function (item) {
+            return 'Rad ' + item.row + ', kol ' + item.col + ': ' + item.before + ' -> ' + item.after;
+          }));
+          updateSolvedState();
+        });
+      }
+
+      if (fillFromNotesBtn) {
+        fillFromNotesBtn.addEventListener('click', function () {
+          var fills = fillFromSingleNotes();
+          if (!fillFromNotesResult) {
+            return;
+          }
+
+          if (fills.length === 0) {
+            fillFromNotesResult.textContent = 'Ingen träff';
+            updateSolvedState();
+            return;
+          }
+
+          demoteExistingLogicFilled();
+          fills.forEach(function (item) {
+            var cell = findCell(item.row - 1, item.col - 1);
+            if (!cell) {
+              return;
+            }
+            cell.dataset.logicFilled = '1';
+            refreshCellStyle(cell);
+          });
+
+          var preview = fills.slice(0, 3).map(function (item) {
+            return 'r' + item.row + 'k' + item.col + '=' + item.value;
+          }).join(', ');
+          var suffix = fills.length > 3 ? ' +' + (fills.length - 3) + ' till' : '';
+          fillFromNotesResult.textContent = fills.length + ' ifylld(a): ' + preview + suffix;
+
+          appendLogicHistory('Fyll från enkel anteckning', 'Träff: ' + fills.length + ' cell(er) med en anteckning', fills.map(function (item) {
+            return 'Rad ' + item.row + ', kol ' + item.col + ' sattes till ' + item.value;
+          }));
+
+          var last = fills[fills.length - 1];
+          var lastCell = findCell(last.row - 1, last.col - 1);
+          if (lastCell) {
+            selectCell(lastCell);
+          }
+          updateSolvedState();
+        });
+      }
+
+      if (singleCandidateBtn) {
+        singleCandidateBtn.addEventListener('click', function () {
+          var fills = fillSingleCandidatesAllCells();
+          if (!singleCandidateResult) {
+            return;
+          }
+          if (fills.length === 0) {
+            singleCandidateResult.textContent = 'Ingen träff';
+            updateSolvedState();
+            return;
+          }
+
+          demoteExistingLogicFilled();
+          fills.forEach(function (item) {
+            var cell = findCell(item.row - 1, item.col - 1);
+            if (!cell) {
+              return;
+            }
+            cell.dataset.logicFilled = '1';
+            refreshCellStyle(cell);
+          });
+
+          var preview = fills.slice(0, 3).map(function (item) {
+            return 'r' + item.row + 'k' + item.col + '=' + item.value;
+          }).join(', ');
+          var suffix = fills.length > 3 ? ' +' + (fills.length - 3) + ' till' : '';
+          singleCandidateResult.textContent = fills.length + ' ifylld(a): ' + preview + suffix;
+
+          appendLogicHistory('Fyll enkla värden', 'Träff: ' + fills.length + ' enkel kandidat(er)', fills.map(function (item) {
+            return 'Rad ' + item.row + ', kol ' + item.col + ' sattes till ' + item.value;
+          }));
+
+          var last = fills[fills.length - 1];
+          var lastCell = findCell(last.row - 1, last.col - 1);
+          if (lastCell) {
+            selectCell(lastCell);
+          }
+          updateSolvedState();
+        });
+      }
+
+      if (crossHatchingBtn) {
+        crossHatchingBtn.addEventListener('click', function () {
+          var fills = fillByCrossHatching();
+          if (!crossHatchingResult) {
+            return;
+          }
+          if (fills.length === 0) {
+            crossHatchingResult.textContent = 'Ingen träff';
+            updateSolvedState();
+            return;
+          }
+
+          demoteExistingLogicFilled();
+          fills.forEach(function (item) {
+            var cell = findCell(item.row - 1, item.col - 1);
+            if (!cell) {
+              return;
+            }
+            cell.dataset.logicFilled = '1';
+            refreshCellStyle(cell);
+          });
+
+          var preview = fills.slice(0, 3).map(function (item) {
+            return 'r' + item.row + 'k' + item.col + '=' + item.value;
+          }).join(', ');
+          var suffix = fills.length > 3 ? ' +' + (fills.length - 3) + ' till' : '';
+          crossHatchingResult.textContent = fills.length + ' ifylld(a): ' + preview + suffix;
+
+          appendLogicHistory('Skanning/Cross-hatching', 'Träff: ' + fills.length + ' cell(er) via skanning', fills.map(function (item) {
+            return 'Rad ' + item.row + ', kol ' + item.col + ' sattes till ' + item.value;
+          }));
+
+          var last = fills[fills.length - 1];
+          var lastCell = findCell(last.row - 1, last.col - 1);
+          if (lastCell) {
+            selectCell(lastCell);
+          }
+          updateSolvedState();
+        });
+      }
+
+      if (yWingBtn) {
+        yWingBtn.addEventListener('click', function () {
+          var stateBefore = getBoardStateSignature();
+          if (stateBefore !== lastYWingSearchState) {
+            seenYWingHitKeys.clear();
+          }
+
+          var result = applyYWing(seenYWingHitKeys);
+          if (!yWingResult) {
+            return;
+          }
+
+          if (!result) {
+            clearYWingHighlights();
+            clearXYZWingHighlights();
+            yWingResult.textContent = seenYWingHitKeys.size > 0 ? 'Ingen ny träff' : 'Ingen träff';
+            lastYWingSearchState = stateBefore;
+            updateSolvedState();
+            return;
+          }
+
+          seenYWingHitKeys.add(result.hitKey);
+          lastYWingSearchState = getBoardStateSignature();
+
+          demoteExistingLogicFilled();
+          clearXYZWingHighlights();
+          markYWingHighlights(result);
+
+          yWingResult.textContent =
+            'Pivot r' + result.pivot.row + 'k' + result.pivot.col +
+            ', tog bort ' + result.sharedDigit + ' i ' + result.removals.length + ' cell(er)';
+
+          appendLogicHistory(
+            'Y-vinge',
+            'Träff: pivot ' + formatCellLabel(findCell(result.pivot.row - 1, result.pivot.col - 1)) +
+              ' [' + result.pivot.notes + '], vingar ' +
+              formatCellLabel(findCell(result.wingA.row - 1, result.wingA.col - 1)) +
+              ' [' + result.wingA.notes + '] och ' +
+              formatCellLabel(findCell(result.wingB.row - 1, result.wingB.col - 1)) +
+              ' [' + result.wingB.notes + ']',
+            result.removals.map(function (item) {
+              return 'Rad ' + item.row + ', kol ' + item.col + ': tog bort ' + item.removed;
+            })
+          );
+          updateSolvedState();
+        });
+      }
+
+      if (xyzWingBtn) {
+        xyzWingBtn.addEventListener('click', function () {
+          var stateBefore = getBoardStateSignature();
+          if (stateBefore !== lastXYZWingSearchState) {
+            seenXYZWingHitKeys.clear();
+          }
+
+          var result = applyXYZWing(seenXYZWingHitKeys);
+          if (!xyzWingResult) {
+            return;
+          }
+
+          if (!result) {
+            clearXYZWingHighlights();
+            xyzWingResult.textContent = seenXYZWingHitKeys.size > 0 ? 'Ingen ny träff' : 'Ingen träff';
+            lastXYZWingSearchState = stateBefore;
+            updateSolvedState();
+            return;
+          }
+
+          seenXYZWingHitKeys.add(result.hitKey);
+          lastXYZWingSearchState = getBoardStateSignature();
+
+          demoteExistingLogicFilled();
+          clearYWingHighlights();
+          markXYZWingHighlights(result);
+
+          xyzWingResult.textContent =
+            'Hinge r' + result.hinge.row + 'k' + result.hinge.col +
+            ', tog bort ' + result.commonDigit + ' i ' + result.removals.length + ' cell(er)';
+
+          appendLogicHistory(
+            'XYZ-vinge',
+            'Träff: hinge ' + formatCellLabel(findCell(result.hinge.row - 1, result.hinge.col - 1)) +
+              ' [' + result.hinge.notes + '], vingar ' +
+              formatCellLabel(findCell(result.wingA.row - 1, result.wingA.col - 1)) +
+              ' [' + result.wingA.notes + '] och ' +
+              formatCellLabel(findCell(result.wingB.row - 1, result.wingB.col - 1)) +
+              ' [' + result.wingB.notes + '], gemensam kandidat ' + result.commonDigit,
+            result.removals.map(function (item) {
+              return 'Rad ' + item.row + ', kol ' + item.col + ': tog bort ' + item.removed;
+            })
+          );
+
+          updateSolvedState();
+        });
+      }
+
       noteInputs.forEach(function (input) {
         input.value = normalizeNotes(input.value);
       });
 
       cells.forEach(function (cell) {
+        refreshCellStyle(cell);
         refreshNoteDisplay(cell);
 
         cell.addEventListener('focus', function () {
@@ -433,7 +2068,10 @@
 
         cell.addEventListener('input', function () {
           cell.value = (cell.value.match(/[1-9]/) || [''])[0];
+          cell.dataset.logicFilled = '0';
+          refreshCellStyle(cell);
           refreshNoteDisplay(cell);
+          updateSolvedState();
         });
 
         cell.addEventListener('keydown', function (e) {
@@ -448,6 +2086,10 @@
           if (next) {
             e.preventDefault();
             moveSelection(next[0], next[1]);
+            return;
+          }
+
+          if (cell.dataset.fixed === '1') {
             return;
           }
 
@@ -483,6 +2125,7 @@
       if (cells.length > 0) {
         selectCell(cells[0]);
       }
+      updateSolvedState();
     })();
   </script>
 </body>

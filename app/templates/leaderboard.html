@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Topplista</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: #f4f8fb;
+      color: #1f2937;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #d6e0ea;
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .top-link {
+      text-decoration: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #1f2937;
+      background: #fff;
+      font-weight: 600;
+    }
+    .leaderboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .leaderboard-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .leaderboard-item:hover {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
+    .rank {
+      min-width: 42px;
+      font-weight: 800;
+      color: #166534;
+      font-size: 1.05rem;
+    }
+    .main {
+      flex: 1;
+      min-width: 0;
+    }
+    .title {
+      font-weight: 700;
+      color: #14532d;
+      margin-bottom: 4px;
+    }
+    .meta {
+      font-size: 0.86rem;
+      color: #64748b;
+    }
+    .time {
+      white-space: nowrap;
+      font-weight: 700;
+      color: #14532d;
+    }
+    .empty {
+      color: #64748b;
+      font-size: 0.95rem;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="header">
+      <h1>Full topplista</h1>
+      <a class="top-link" href="{{ url_for('main.index') }}">Till startsidan</a>
+    </div>
+
+    {% if leaderboard %}
+      <div class="leaderboard-list">
+        {% for item in leaderboard %}
+          <a class="leaderboard-item" href="{{ url_for('main.completed_game_detail', game_id=item.ongoing_game_id) }}">
+            <div class="rank">#{{ loop.index }}</div>
+            <div class="main">
+              <div class="title">{{ item.game_title }}</div>
+              <div class="meta">Svårighet: {{ item.difficulty|capitalize }} | Klar: {{ item.completed_at }}</div>
+            </div>
+            <div class="time">{{ item.elapsed_seconds|format_time }}</div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">Ingen klar topptid ännu.</p>
+    {% endif %}
+  </main>
+</body>
+</html>

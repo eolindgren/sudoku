@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avslutat spel</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: #f4f8fb;
+      color: #1f2937;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #d6e0ea;
+      border-radius: 14px;
+      padding: 22px;
+    }
+    .top-link {
+      text-decoration: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #1f2937;
+      background: #fff;
+      margin-right: 8px;
+    }
+    .layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(9, 44px);
+      grid-template-rows: repeat(9, 44px);
+      border: 3px solid #1e293b;
+      width: fit-content;
+      background: #fff;
+    }
+    .cell {
+      width: 44px;
+      height: 44px;
+      border: 1px solid #94a3b8;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .thick-right {
+      border-right: 3px solid #1e293b;
+    }
+    .thick-bottom {
+      border-bottom: 3px solid #1e293b;
+    }
+    .history {
+      min-width: 320px;
+      flex: 1;
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      padding: 12px;
+      background: #fafcff;
+      max-height: 520px;
+      overflow-y: auto;
+    }
+    .history-item {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      line-height: 1.3;
+    }
+    .history-time {
+      color: #64748b;
+      font-size: 0.82rem;
+      margin-bottom: 4px;
+    }
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.92rem;
+      color: #475569;
+      margin-top: 4px;
+    }
+    .empty {
+      color: #64748b;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Avslutat spel: {{ game.title }}</h1>
+    <p>
+      <a class="top-link" href="{{ url_for('main.index') }}">Startsida</a>
+      <a class="top-link" href="{{ url_for('main.completed_games') }}">Avslutade</a>
+      <a class="top-link" href="{{ url_for('main.leaderboard') }}">Topplista</a>
+    </p>
+
+    <div class="meta">
+      <span>Svårighet: {{ game.difficulty|capitalize }}</span>
+      <span>Tid: {{ game.elapsed_seconds|format_time }}</span>
+      <span>Avslutat: {{ game.completed_at }}</span>
+    </div>
+
+    <div class="layout">
+      <section class="board" aria-label="Ifylld spelplan">
+        {% for r in range(9) %}
+          {% for c in range(9) %}
+            {% set right = 'thick-right' if c in [2, 5] else '' %}
+            {% set bottom = 'thick-bottom' if r in [2, 5] else '' %}
+            <div class="cell {{ right }} {{ bottom }}">{{ game.grid[r][c] }}</div>
+          {% endfor %}
+        {% endfor %}
+      </section>
+
+      <section class="history" aria-label="Alla ändringar">
+        <h3>Alla ändringar</h3>
+        {% if changes %}
+          {% for change in changes %}
+            <article class="history-item">
+              <div class="history-time">{{ change.changed_at }}</div>
+              <div>
+                Rad {{ change.row_idx + 1 }}, kol {{ change.col_idx + 1 }}
+                | Värde: {{ change.old_value or '-' }} -> {{ change.new_value or '-' }}
+                | Anteckning: {{ change.old_notes or '-' }} -> {{ change.new_notes or '-' }}
+              </div>
+            </article>
+          {% endfor %}
+        {% else %}
+          <p class="empty">Inga sparade ändringar hittades för spelet.</p>
+        {% endif %}
+      </section>
+    </div>
+  </main>
+</body>
+</html>

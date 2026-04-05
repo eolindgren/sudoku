@@ -39,6 +39,49 @@
     .btn.secondary {
       background: #334155;
     }
+    .ongoing-section {
+      margin-top: 24px;
+      padding: 16px;
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      background: #fafcff;
+    }
+    .ongoing-section h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: #1f2937;
+    }
+    .ongoing-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ongoing-item {
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      text-decoration: none;
+      color: #1f2937;
+      transition: background 0.2s;
+    }
+    .ongoing-item:hover {
+      background: #e0e7ff;
+      border-color: #2563eb;
+    }
+    .ongoing-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .ongoing-meta {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+    .empty-ongoing {
+      color: #64748b;
+      font-size: 0.95rem;
+    }
   </style>
 </head>
 <body>
@@ -49,6 +92,20 @@
       <a class="btn secondary" href="{{ url_for('main.ongoing_games') }}">Visa pågående spel</a>
       <a class="btn" href="{{ url_for('main.builder') }}">Lägg in nytt Sudoku</a>
     </div>
+
+    {% if ongoing_games %}
+      <div class="ongoing-section">
+        <h2>Pågående spel</h2>
+        <div class="ongoing-list">
+          {% for game in ongoing_games %}
+            <a class="ongoing-item" href="{{ url_for('main.builder', game_id=game.id) }}">
+              <div class="ongoing-title">{{ game.difficulty|capitalize }}: {{ game.title }}</div>
+              <div class="ongoing-meta">Senast sparad: {{ game.updated_at }}</div>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
   </main>
 </body>
 </html>

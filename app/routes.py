@@ -46,7 +46,8 @@ def _sanitize_notes_value(value: str) -> str:
 
 @bp.route("/")
 def index():
-    return render_template("index.html")
+    ongoing = list_games(current_app.config["DATABASE_PATH"], game_type="ongoing")
+    return render_template("index.html", ongoing_games=ongoing)
 
 
 @bp.route("/builder")

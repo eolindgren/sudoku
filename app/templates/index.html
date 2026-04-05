@@ -100,7 +100,7 @@
           {% for game in ongoing_games %}
             <a class="ongoing-item" href="{{ url_for('main.builder', game_id=game.id) }}">
               <div class="ongoing-title">{{ game.difficulty|capitalize }}: {{ game.title }}</div>
-              <div class="ongoing-meta">Senast sparad: {{ game.updated_at }}</div>
+              <div class="ongoing-meta">Senast sparad: {{ game.updated_at }} | Tid: {{ game.elapsed_seconds|format_time }}</div>
             </a>
           {% endfor %}
         </div>

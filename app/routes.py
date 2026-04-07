@@ -1,13 +1,17 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from markupsafe import Markup
+import json
 
 from .storage import (
+    delete_game,
+    find_base_game_id_by_grid,
     get_game_by_id,
     list_completed_games,
-    list_game_changes,
+    list_game_inputs,
     list_games,
     list_leaderboard,
     mark_game_completed,
-    record_game_changes,
+    record_game_inputs,
     save_game,
     update_game,
     upsert_leaderboard_entry,
@@ -109,6 +113,56 @@ def _build_fixed_cells_from_grid(raw_grid: list[list[str]] | None) -> list[list[
     return fixed
 
 
+def _parse_input_log_json(raw_value: str) -> list[dict[str, int | str]]:
+    if not raw_value.strip():
+        return []
+    try:
+        parsed = json.loads(raw_value)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+
+    entries: list[dict[str, int | str]] = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        value = str(item.get("value", "")).strip()
+        if value not in {"1", "2", "3", "4", "5", "6", "7", "8", "9"}:
+            continue
+        try:
+            seq_no = int(item.get("seq_no", 0))
+            row_idx = int(item.get("row_idx", -1))
+            col_idx = int(item.get("col_idx", -1))
+            elapsed_seconds = int(item.get("elapsed_seconds", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        if seq_no <= 0 or not (0 <= row_idx <= 8) or not (0 <= col_idx <= 8):
+            continue
+        entry: dict[str, int | str] = {
+            "seq_no": seq_no,
+            "row_idx": row_idx,
+            "col_idx": col_idx,
+            "value": value,
+            "elapsed_seconds": max(0, elapsed_seconds),
+        }
+        input_kind = str(item.get("input_kind", "manual") or "manual").strip().lower()
+        if input_kind not in {"manual", "logic"}:
+            input_kind = "manual"
+        entry["input_kind"] = input_kind
+
+        action_name = str(item.get("action_name", "") or "").strip()
+        if input_kind == "logic" and action_name:
+            entry["action_name"] = action_name[:120]
+
+        entered_at = str(item.get("entered_at", "")).strip()
+        if entered_at:
+            entry["entered_at"] = entered_at
+        entries.append(entry)
+
+    return entries
+
+
 @bp.route("/")
 def index():
     ongoing = list_games(current_app.config["DATABASE_PATH"], game_type="ongoing")
@@ -118,8 +172,80 @@ def index():
 
 @bp.route("/leaderboard")
 def leaderboard():
-    leaderboard_rows = list_leaderboard(current_app.config["DATABASE_PATH"], limit=100)
-    return render_template("leaderboard.html", leaderboard=leaderboard_rows)
+    leaderboard_rows = list_leaderboard(current_app.config["DATABASE_PATH"], limit=1000)
+    requested_difficulty = str(request.args.get("difficulty", "")).strip().lower()
+    difficulty_order = ["latt", "medel", "svar", "expert"]
+    difficulty_labels = {
+        "latt": "Lätt",
+        "medel": "Medel",
+        "svar": "Svår",
+        "expert": "Expert",
+    }
+
+    def normalize_difficulty(value: str) -> str:
+        return value.replace("å", "a").replace("ä", "a").replace("ö", "o")
+
+    requested_key = normalize_difficulty(requested_difficulty) if requested_difficulty else ""
+
+    grouped_map: dict[str, list[dict[str, object]]] = {}
+    for row in leaderboard_rows:
+        raw = str(row.get("difficulty", "")).strip().lower()
+        key = normalize_difficulty(raw)
+        if not key:
+            key = "okand"
+        grouped_map.setdefault(key, []).append(row)
+
+    grouped_leaderboard = []
+    if requested_key:
+        rows = grouped_map.get(requested_key, [])
+        label = difficulty_labels.get(requested_key, requested_key.capitalize())
+        if rows:
+            grouped_leaderboard.append(
+                {
+                    "key": requested_key,
+                    "label": label,
+                    "rows": rows,
+                    "full_url": None,
+                    "is_full": True,
+                }
+            )
+    else:
+        for key in difficulty_order:
+            rows = grouped_map.pop(key, [])
+            if rows:
+                grouped_leaderboard.append(
+                    {
+                        "key": key,
+                        "label": difficulty_labels[key],
+                        "rows": rows[:5],
+                        "full_url": url_for("main.leaderboard", difficulty=key),
+                        "is_full": False,
+                        "total_count": len(rows),
+                    }
+                )
+
+        for key in sorted(grouped_map.keys()):
+            rows = grouped_map[key]
+            if not rows:
+                continue
+            grouped_leaderboard.append(
+                {
+                    "key": key,
+                    "label": key.capitalize(),
+                    "rows": rows[:5],
+                    "full_url": url_for("main.leaderboard", difficulty=key),
+                    "is_full": False,
+                    "total_count": len(rows),
+                }
+            )
+
+    return render_template(
+        "leaderboard.html",
+        grouped_leaderboard=grouped_leaderboard,
+        leaderboard=leaderboard_rows,
+        requested_difficulty_key=requested_key,
+        requested_difficulty_label=difficulty_labels.get(requested_key, requested_key.capitalize() if requested_key else ""),
+    )
 
 
 @bp.route("/builder")
@@ -128,9 +254,11 @@ def builder():
     grid_values = [["" for _ in range(9)] for _ in range(9)]
     note_values = [["" for _ in range(9)] for _ in range(9)]
     fixed_cells = [[False for _ in range(9)] for _ in range(9)]
+    solution_grid = [["" for _ in range(9)] for _ in range(9)]
     selected_difficulty = ""
     loaded_game = None
     elapsed_seconds = 0
+    input_log: list[dict[str, int | str]] = []
 
     if game_id is not None:
         loaded_game = get_game_by_id(current_app.config["DATABASE_PATH"], game_id)
@@ -175,12 +303,23 @@ def builder():
             )
             source_grid = source_game.get("grid", []) if source_game else []
             fixed_cells = _build_fixed_cells_from_grid(source_grid)
+            source_solution = source_game.get("solution", []) if source_game else []
+            if isinstance(source_solution, list):
+                solution_grid = source_solution
+            input_log = list_game_inputs(current_app.config["DATABASE_PATH"], int(loaded_game["id"]))
+        elif loaded_game.get("game_type") == "ongoing":
+            own_solution = loaded_game.get("solution", [])
+            if isinstance(own_solution, list):
+                solution_grid = own_solution
+            input_log = list_game_inputs(current_app.config["DATABASE_PATH"], int(loaded_game["id"]))
 
     return render_template(
         "builder.html",
         grid_values=grid_values,
         note_values=note_values,
         fixed_cells=fixed_cells,
+        solution_grid=solution_grid,
+        input_log=input_log,
         selected_difficulty=selected_difficulty,
         loaded_game=loaded_game,
         elapsed_seconds=elapsed_seconds,
@@ -190,7 +329,42 @@ def builder():
 @bp.route("/games")
 def games():
     games_data = list_games(current_app.config["DATABASE_PATH"], game_type="base")
-    return render_template("games.html", games=games_data)
+    difficulty_order = ["expert", "svar", "medel", "latt"]
+    difficulty_labels = {
+        "expert": "Expert",
+        "svar": "Svår",
+        "medel": "Medel",
+        "latt": "Lätt",
+    }
+
+    grouped_map: dict[str, list[dict[str, object]]] = {}
+    for game in games_data:
+        key = str(game.get("difficulty", "")).strip().lower()
+        if not key:
+            key = "okand"
+        grouped_map.setdefault(key, []).append(game)
+
+    grouped_games: list[dict[str, object]] = []
+    for key in difficulty_order:
+        rows = grouped_map.pop(key, [])
+        if rows:
+            grouped_games.append({
+                "key": key,
+                "label": difficulty_labels[key],
+                "rows": rows,
+            })
+
+    for key in sorted(grouped_map.keys()):
+        rows = grouped_map[key]
+        if not rows:
+            continue
+        grouped_games.append({
+            "key": key,
+            "label": key.capitalize(),
+            "rows": rows,
+        })
+
+    return render_template("games.html", games=games_data, grouped_games=grouped_games)
 
 
 @bp.route("/ongoing/delete/<int:game_id>", methods=["POST"])
@@ -213,6 +387,18 @@ def completed_games():
     return render_template("completed_games.html", games=games_data)
 
 
+@bp.route("/completed/delete/<int:game_id>", methods=["POST"])
+def delete_completed_game(game_id: int):
+    game = get_game_by_id(current_app.config["DATABASE_PATH"], game_id)
+    if game is None or game.get("game_type") != "ongoing" or not game.get("completed_at"):
+        flash("Avslutad omgång hittades inte.", "error")
+        return redirect(url_for("main.completed_games"))
+
+    delete_game(current_app.config["DATABASE_PATH"], game_id)
+    flash("Avslutad omgång raderades.", "success")
+    return redirect(url_for("main.completed_games"))
+
+
 @bp.route("/completed/<int:game_id>")
 def completed_game_detail(game_id: int):
     game = get_game_by_id(current_app.config["DATABASE_PATH"], game_id)
@@ -220,8 +406,8 @@ def completed_game_detail(game_id: int):
         flash("Avslutat spel hittades inte.", "error")
         return redirect(url_for("main.completed_games"))
 
-    changes = list_game_changes(current_app.config["DATABASE_PATH"], game_id)
-    return render_template("completed_game_detail.html", game=game, changes=changes)
+    input_entries = list_game_inputs(current_app.config["DATABASE_PATH"], game_id)
+    return render_template("completed_game_detail.html", game=game, input_entries=input_entries)
 
 
 @bp.route("/games/save", methods=["POST"])
@@ -237,9 +423,12 @@ def save_game_route():
     except ValueError:
         elapsed_seconds = 0
 
-    def _render_error(message: str):
+    input_log_entries = _parse_input_log_json(request.form.get("input_log_json", ""))
+
+    def _render_error(message: str, category: str = "error"):
         loaded_game = None
         fixed_cells = [[False for _ in range(9)] for _ in range(9)]
+        solution_grid = [["" for _ in range(9)] for _ in range(9)]
         if source_game_id.isdigit():
             loaded_game = get_game_by_id(current_app.config["DATABASE_PATH"], int(source_game_id))
             if loaded_game and loaded_game.get("game_type") == "ongoing" and loaded_game.get("source_game_id"):
@@ -248,12 +437,21 @@ def save_game_route():
                 )
                 source_grid = source_game.get("grid", []) if source_game else []
                 fixed_cells = _build_fixed_cells_from_grid(source_grid)
-        flash(message, "error")
+                source_solution = source_game.get("solution", []) if source_game else []
+                if isinstance(source_solution, list):
+                    solution_grid = source_solution
+            elif loaded_game and loaded_game.get("game_type") == "ongoing":
+                own_solution = loaded_game.get("solution", [])
+                if isinstance(own_solution, list):
+                    solution_grid = own_solution
+        flash(message, category)
         return render_template(
             "builder.html",
             grid_values=grid if grid else [["" for _ in range(9)] for _ in range(9)],
             note_values=notes if notes else [["" for _ in range(9)] for _ in range(9)],
             fixed_cells=fixed_cells,
+            solution_grid=solution_grid,
+            input_log=input_log_entries,
             selected_difficulty=difficulty,
             loaded_game=loaded_game,
             elapsed_seconds=elapsed_seconds,
@@ -315,6 +513,11 @@ def save_game_route():
                 source_game_id=source_ref,
                 include_version_suffix=True,
             )
+            record_game_inputs(
+                current_app.config["DATABASE_PATH"],
+                new_game_id,
+                input_log_entries,
+            )
 
             if _is_completed_sudoku(grid):
                 mark_game_completed(current_app.config["DATABASE_PATH"], new_game_id)
@@ -340,10 +543,6 @@ def save_game_route():
             flash(f"Spara som skapade {created_name}.", "success")
             return redirect(url_for("main.builder", game_id=new_game_id))
 
-        old_grid = ongoing_game.get("grid", []) if ongoing_game else [["" for _ in range(9)] for _ in range(9)]
-        old_notes = ongoing_game.get("notes", []) if ongoing_game else [["" for _ in range(9)] for _ in range(9)]
-        changes = _build_grid_differences(old_grid, grid, old_notes, notes)
-
         was_updated = update_game(
             current_app.config["DATABASE_PATH"],
             game_id=ongoing_id,
@@ -356,7 +555,11 @@ def save_game_route():
             flash(f"Pågående spel {ongoing_id} hittades inte.", "error")
             return redirect(url_for("main.ongoing_games"))
 
-        record_game_changes(current_app.config["DATABASE_PATH"], ongoing_id, changes)
+        record_game_inputs(
+            current_app.config["DATABASE_PATH"],
+            ongoing_id,
+            input_log_entries,
+        )
 
         updated_game = get_game_by_id(current_app.config["DATABASE_PATH"], ongoing_id)
         ongoing_name = str(updated_game.get("title", ongoing_id)) if updated_game else str(ongoing_id)
@@ -373,24 +576,38 @@ def save_game_route():
                 difficulty=difficulty,
                 elapsed_seconds=elapsed_seconds,
             )
-            flash(
-                f"Grattis! {ongoing_prefix} är löst på {elapsed_seconds} sekunder och tillagd i topplistan.",
-                "success",
-            )
             return redirect(url_for("main.completed_game_detail", game_id=ongoing_id))
 
         flash(f"Pågående spel {ongoing_prefix} uppdaterades.", "success")
         return redirect(url_for("main.ongoing_games"))
 
     game_type = "ongoing" if source_game_id.isdigit() else "base"
-    new_game_id = save_game(
-        current_app.config["DATABASE_PATH"],
-        difficulty=difficulty,
-        grid=grid,
-        notes=notes,
-        game_type=game_type,
-        elapsed_seconds=elapsed_seconds,
-    )
+    if game_type == "base":
+        existing_base_id = find_base_game_id_by_grid(
+            current_app.config["DATABASE_PATH"],
+            grid,
+        )
+        if existing_base_id is not None:
+            existing_game_url = url_for("main.builder", game_id=existing_base_id)
+            return _render_error(
+                Markup(
+                    f"Detta grundspel finns redan sparat som spel "
+                    f"<a href=\"{existing_game_url}\">{existing_base_id}</a>."
+                ),
+                category="duplicate_base",
+            )
+
+    try:
+        new_game_id = save_game(
+            current_app.config["DATABASE_PATH"],
+            difficulty=difficulty,
+            grid=grid,
+            notes=notes,
+            game_type=game_type,
+            elapsed_seconds=elapsed_seconds,
+        )
+    except ValueError as err:
+        return _render_error(str(err))
 
     if game_type == "ongoing":
         flash(f"Pågående spel sparat som {new_game_id}.", "success")

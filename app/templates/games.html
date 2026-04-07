@@ -83,6 +83,16 @@
       margin-top: 12px;
       color: #475569;
     }
+    .difficulty-section {
+      margin-top: 16px;
+    }
+    .difficulty-title {
+      margin: 0 0 6px;
+      font-size: 1.02rem;
+      color: #14532d;
+      border-bottom: 1px solid #d9f99d;
+      padding-bottom: 6px;
+    }
 
     .grid-preview {
       display: grid;
@@ -132,6 +142,8 @@
       <a class="top-link" href="{{ url_for('main.completed_games') }}">Avslutade</a>
     </p>
 
+    <p class="empty">Tips: läs in Sudoku från foto finns nu på sidan <a class="load-link" href="{{ url_for('main.builder') }}">Läs in ny Sudoku</a>.</p>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -140,34 +152,39 @@
       {% endif %}
     {% endwith %}
 
-    {% if games %}
-      {% set difficulty_labels = {'latt': 'Lätt', 'medel': 'Medel', 'svar': 'Svår', 'expert': 'Expert'} %}
-      {% for game in games %}
-        <article class="game">
-          <div class="game-head">
-            <h3><a class="load-link" href="{{ url_for('main.builder', game_id=game.id) }}">{{ difficulty_labels.get(game.difficulty, game.difficulty|capitalize) }}: {{ game.title }}</a></h3>
-            <div class="right-side">
-              <div class="grid-preview">
-                {% set grid = game.get('grid', []) or [] %}
-                {% for r in range(9) %}
-                  {% for c in range(9) %}
-                    {% set cell_value = grid[r][c] if (r < grid|length and c < grid[r]|length) else '' %}
-                    <div class="cell-preview">{{ cell_value }}</div>
-                  {% endfor %}
-                {% endfor %}
+    {% if grouped_games %}
+      {% for group in grouped_games %}
+        <section class="difficulty-section">
+          <h2 class="difficulty-title">{{ group.label }}</h2>
+          {% for game in group.rows %}
+            <article class="game">
+              <div class="game-head">
+                <h3><a class="load-link" href="{{ url_for('main.builder', game_id=game.id) }}">{{ game.title }}</a></h3>
+                <div class="right-side">
+                  <div class="grid-preview">
+                    {% set grid = game.get('grid', []) or [] %}
+                    {% for r in range(9) %}
+                      {% for c in range(9) %}
+                        {% set cell_value = grid[r][c] if (r < grid|length and c < grid[r]|length) else '' %}
+                        <div class="cell-preview">{{ cell_value }}</div>
+                      {% endfor %}
+                    {% endfor %}
+                  </div>
+                  <a class="load-btn" href="{{ url_for('main.builder', game_id=game.id) }}">Ladda spel</a>
+                </div>
               </div>
-              <a class="load-btn" href="{{ url_for('main.builder', game_id=game.id) }}">Ladda spel</a>
-            </div>
-          </div>
-          <div class="meta">
-            <span>Skapad: {{ game.created_at }}</span>
-            <span>ID: {{ game.id }}</span>
-          </div>
-        </article>
+              <div class="meta">
+                <span>Skapad: {{ game.created_at }}</span>
+                <span>ID: {{ game.id }}</span>
+              </div>
+            </article>
+          {% endfor %}
+        </section>
       {% endfor %}
     {% else %}
       <p class="empty">Inga grund-spel ar sparade an.</p>
     {% endif %}
   </main>
+
 </body>
 </html>

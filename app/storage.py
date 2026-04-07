@@ -42,6 +42,78 @@ def _empty_notes() -> list[list[str]]:
     return [["" for _ in range(9)] for _ in range(9)]
 
 
+def _empty_grid() -> list[list[str]]:
+    return [["" for _ in range(9)] for _ in range(9)]
+
+
+def _normalize_grid(grid: Any) -> list[list[str]]:
+    normalized = _empty_grid()
+    if not isinstance(grid, list):
+        return normalized
+
+    allowed = {"1", "2", "3", "4", "5", "6", "7", "8", "9"}
+    for r in range(min(9, len(grid))):
+        row = grid[r] if isinstance(grid[r], list) else []
+        for c in range(min(9, len(row))):
+            value = str(row[c]).strip() if row[c] is not None else ""
+            normalized[r][c] = value if value in allowed else ""
+    return normalized
+
+
+def _find_empty_cell(board: list[list[int]]) -> tuple[int, int] | None:
+    for r in range(9):
+        for c in range(9):
+            if board[r][c] == 0:
+                return r, c
+    return None
+
+
+def _can_place_digit(board: list[list[int]], row: int, col: int, digit: int) -> bool:
+    for idx in range(9):
+        if board[row][idx] == digit or board[idx][col] == digit:
+            return False
+
+    box_row = (row // 3) * 3
+    box_col = (col // 3) * 3
+    for r in range(box_row, box_row + 3):
+        for c in range(box_col, box_col + 3):
+            if board[r][c] == digit:
+                return False
+    return True
+
+
+def _solve_board(board: list[list[int]]) -> bool:
+    empty_pos = _find_empty_cell(board)
+    if empty_pos is None:
+        return True
+
+    row, col = empty_pos
+    for digit in range(1, 10):
+        if not _can_place_digit(board, row, col, digit):
+            continue
+        board[row][col] = digit
+        if _solve_board(board):
+            return True
+        board[row][col] = 0
+    return False
+
+
+def _build_solution_grid(grid: list[list[str]]) -> list[list[str]] | None:
+    board = [[int(cell) if cell else 0 for cell in row] for row in _normalize_grid(grid)]
+    if not _solve_board(board):
+        return None
+    return [[str(board[r][c]) for c in range(9)] for r in range(9)]
+
+
+def _safe_load_json(value: Any, fallback: Any) -> Any:
+    if not isinstance(value, str) or not value.strip():
+        return fallback
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return fallback
+
+
 def init_db(database_path: str) -> None:
     with get_connection(database_path) as conn:
         conn.execute(
@@ -141,6 +213,55 @@ def init_db(database_path: str) -> None:
         if "completed_at" not in columns:
             conn.execute("ALTER TABLE sudoku_games ADD COLUMN completed_at TEXT")
 
+        columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(sudoku_games)").fetchall()
+        }
+        if "solution_json" not in columns:
+            conn.execute("ALTER TABLE sudoku_games ADD COLUMN solution_json TEXT")
+
+        base_rows = conn.execute(
+            """
+            SELECT id, grid_json
+            FROM sudoku_games
+            WHERE game_type = 'base' AND (solution_json IS NULL OR solution_json = '')
+            """
+        ).fetchall()
+        for row in base_rows:
+            try:
+                grid = _normalize_grid(json.loads(row["grid_json"]))
+            except json.JSONDecodeError:
+                grid = _empty_grid()
+            solution = _build_solution_grid(grid)
+            if solution is None:
+                continue
+            conn.execute(
+                "UPDATE sudoku_games SET solution_json = ? WHERE id = ?",
+                (json.dumps(solution), row["id"]),
+            )
+
+        ongoing_rows = conn.execute(
+            """
+            SELECT id, source_game_id
+            FROM sudoku_games
+            WHERE game_type = 'ongoing'
+              AND source_game_id IS NOT NULL
+              AND (solution_json IS NULL OR solution_json = '')
+            """
+        ).fetchall()
+        for row in ongoing_rows:
+            source_row = conn.execute(
+                "SELECT solution_json FROM sudoku_games WHERE id = ?",
+                (row["source_game_id"],),
+            ).fetchone()
+            source_solution = source_row["solution_json"] if source_row else None
+            if not source_solution:
+                continue
+            conn.execute(
+                "UPDATE sudoku_games SET solution_json = ? WHERE id = ?",
+                (source_solution, row["id"]),
+            )
+
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS sudoku_leaderboard (
@@ -171,6 +292,36 @@ def init_db(database_path: str) -> None:
             """
         )
 
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sudoku_game_inputs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ongoing_game_id INTEGER NOT NULL,
+                seq_no INTEGER NOT NULL,
+                row_idx INTEGER NOT NULL,
+                col_idx INTEGER NOT NULL,
+                value TEXT NOT NULL,
+                input_kind TEXT NOT NULL DEFAULT 'manual',
+                action_name TEXT,
+                elapsed_seconds INTEGER NOT NULL DEFAULT 0,
+                entered_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(ongoing_game_id, seq_no)
+            )
+            """
+        )
+
+        input_columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(sudoku_game_inputs)").fetchall()
+        }
+        if "input_kind" not in input_columns:
+            conn.execute(
+                "ALTER TABLE sudoku_game_inputs ADD COLUMN input_kind TEXT NOT NULL DEFAULT 'manual'"
+            )
+        if "action_name" not in input_columns:
+            conn.execute("ALTER TABLE sudoku_game_inputs ADD COLUMN action_name TEXT")
+
         conn.commit()
 
 
@@ -186,6 +337,10 @@ def save_game(
 ) -> int:
     with get_connection(database_path) as conn:
         if game_type == "base":
+            normalized_grid = _normalize_grid(grid)
+            solution_grid = _build_solution_grid(normalized_grid)
+            if solution_grid is None:
+                raise ValueError("Grundspelet måste ha en giltig lösning.")
             count = conn.execute(
                 "SELECT COUNT(*) FROM sudoku_games WHERE game_type = 'base'"
             ).fetchone()[0]
@@ -194,12 +349,41 @@ def save_game(
                 """
                 INSERT INTO sudoku_games
                     (title, difficulty, game_type, grid_json, notes_json, elapsed_seconds,
-                     source_game_id, session_number, save_count, updated_at, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 0, CURRENT_TIMESTAMP, NULL)
+                     source_game_id, session_number, save_count, updated_at, completed_at, solution_json)
+                VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 0, CURRENT_TIMESTAMP, NULL, ?)
                 """,
-                (title, difficulty, game_type, json.dumps(grid), json.dumps(notes), elapsed_seconds),
+                (
+                    title,
+                    difficulty,
+                    game_type,
+                    json.dumps(normalized_grid),
+                    json.dumps(notes),
+                    elapsed_seconds,
+                    json.dumps(solution_grid) if solution_grid else None,
+                ),
             )
         else:
+            source_solution_json = None
+            if source_game_id is not None:
+                source_solution_row = conn.execute(
+                    "SELECT solution_json, grid_json FROM sudoku_games WHERE id = ?",
+                    (source_game_id,),
+                ).fetchone()
+                source_solution_json = (
+                    source_solution_row["solution_json"] if source_solution_row else None
+                )
+                if not source_solution_json and source_solution_row:
+                    try:
+                        source_grid = _normalize_grid(json.loads(source_solution_row["grid_json"]))
+                    except json.JSONDecodeError:
+                        source_grid = _empty_grid()
+                    source_solution = _build_solution_grid(source_grid)
+                    if source_solution is not None:
+                        source_solution_json = json.dumps(source_solution)
+                        conn.execute(
+                            "UPDATE sudoku_games SET solution_json = ? WHERE id = ?",
+                            (source_solution_json, source_game_id),
+                        )
             source_row = conn.execute(
                 "SELECT title FROM sudoku_games WHERE id = ?", (source_game_id,)
             ).fetchone()
@@ -216,14 +400,36 @@ def save_game(
                 """
                 INSERT INTO sudoku_games
                     (title, difficulty, game_type, grid_json, notes_json, elapsed_seconds,
-                     source_game_id, session_number, save_count, updated_at, completed_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, NULL)
+                     source_game_id, session_number, save_count, updated_at, completed_at, solution_json)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, NULL, ?)
                 """,
                 (title, difficulty, game_type, json.dumps(grid), json.dumps(notes), elapsed_seconds,
-                 source_game_id, session_number),
+                 source_game_id, session_number, source_solution_json),
             )
         conn.commit()
         return int(cursor.lastrowid)
+
+
+def find_base_game_id_by_grid(
+    database_path: str,
+    grid: list[list[str]],
+) -> int | None:
+    normalized_grid = _normalize_grid(grid)
+    target_grid_json = json.dumps(normalized_grid)
+
+    with get_connection(database_path) as conn:
+        row = conn.execute(
+            """
+            SELECT id
+            FROM sudoku_games
+            WHERE game_type = 'base' AND grid_json = ?
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (target_grid_json,),
+        ).fetchone()
+
+    return int(row["id"]) if row else None
 
 
 def update_game(
@@ -277,7 +483,7 @@ def list_games(database_path: str, game_type: str) -> list[dict[str, Any]]:
         rows = conn.execute(
             """
                                  SELECT id, title, difficulty, game_type, grid_json, notes_json, elapsed_seconds,
-                 source_game_id, session_number, save_count,
+                 source_game_id, session_number, save_count, solution_json,
                   datetime(created_at, 'localtime') AS created_at,
                                     datetime(updated_at, 'localtime') AS updated_at,
                                     datetime(completed_at, 'localtime') AS completed_at
@@ -325,7 +531,7 @@ def get_game_by_id(database_path: str, game_id: int) -> dict[str, Any] | None:
         row = conn.execute(
             """
             SELECT id, title, difficulty, game_type, grid_json, notes_json, elapsed_seconds,
-                 source_game_id, session_number, save_count,
+                 source_game_id, session_number, save_count, solution_json,
                   datetime(created_at, 'localtime') AS created_at,
                   datetime(updated_at, 'localtime') AS updated_at,
                   datetime(completed_at, 'localtime') AS completed_at
@@ -344,10 +550,8 @@ def get_game_by_id(database_path: str, game_id: int) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         parsed_grid = [["" for _ in range(9)] for _ in range(9)]
 
-    try:
-        parsed_notes = json.loads(game.get("notes_json", "[]"))
-    except json.JSONDecodeError:
-        parsed_notes = _empty_notes()
+    parsed_notes = _safe_load_json(game.get("notes_json"), _empty_notes())
+    parsed_solution = _safe_load_json(game.get("solution_json"), _empty_grid())
 
     if not isinstance(parsed_notes, list):
         parsed_notes = _empty_notes()
@@ -358,8 +562,9 @@ def get_game_by_id(database_path: str, game_id: int) -> dict[str, Any] | None:
         for c in range(min(9, len(row))):
             normalized_notes[r][c] = str(row[c]).strip()
 
-    game["grid"] = parsed_grid
+    game["grid"] = _normalize_grid(parsed_grid)
     game["notes"] = normalized_notes
+    game["solution"] = _normalize_grid(parsed_solution)
     return game
 
 
@@ -404,8 +609,28 @@ def list_leaderboard(database_path: str, limit: int = 10) -> list[dict[str, Any]
             """,
             (limit,),
         ).fetchall()
+        if rows:
+            return [dict(row) for row in rows]
 
-        return [dict(row) for row in rows]
+        # Fallback: derive leaderboard from completed ongoing games if leaderboard table is empty.
+        fallback_rows = conn.execute(
+            """
+            SELECT id,
+                   id AS ongoing_game_id,
+                   source_game_id,
+                   title AS game_title,
+                   difficulty,
+                   elapsed_seconds,
+                   datetime(completed_at, 'localtime') AS completed_at
+            FROM sudoku_games
+            WHERE game_type = 'ongoing' AND completed_at IS NOT NULL
+            ORDER BY elapsed_seconds ASC, datetime(completed_at) ASC, id ASC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+        return [dict(row) for row in fallback_rows]
 
 
 def mark_game_completed(database_path: str, game_id: int) -> None:
@@ -427,7 +652,7 @@ def list_completed_games(database_path: str, limit: int = 200) -> list[dict[str,
         rows = conn.execute(
             """
             SELECT id, title, difficulty, game_type, grid_json, notes_json, elapsed_seconds,
-                   source_game_id, session_number, save_count,
+                 source_game_id, session_number, save_count, solution_json,
                    datetime(created_at, 'localtime') AS created_at,
                    datetime(updated_at, 'localtime') AS updated_at,
                    datetime(completed_at, 'localtime') AS completed_at
@@ -511,6 +736,92 @@ def list_game_changes(database_path: str, ongoing_game_id: int) -> list[dict[str
             FROM sudoku_game_changes
             WHERE ongoing_game_id = ?
             ORDER BY id ASC
+            """,
+            (ongoing_game_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def record_game_inputs(
+    database_path: str,
+    ongoing_game_id: int,
+    input_entries: list[dict[str, Any]],
+) -> None:
+    if not input_entries:
+        return
+
+    rows: list[tuple[int, int, int, int, str, str, str | None, int, str | None]] = []
+    for entry in input_entries:
+        value = str(entry.get("value", "")).strip()
+        if value not in {"1", "2", "3", "4", "5", "6", "7", "8", "9"}:
+            continue
+
+        seq_no = int(entry.get("seq_no", 0))
+        if seq_no <= 0:
+            continue
+
+        row_idx = int(entry.get("row_idx", -1))
+        col_idx = int(entry.get("col_idx", -1))
+        if row_idx < 0 or row_idx > 8 or col_idx < 0 or col_idx > 8:
+            continue
+
+        elapsed_seconds = int(entry.get("elapsed_seconds", 0) or 0)
+        entered_at_raw = entry.get("entered_at")
+        entered_at = str(entered_at_raw).strip() if entered_at_raw else None
+        input_kind = str(entry.get("input_kind", "manual") or "manual").strip().lower()
+        if input_kind not in {"manual", "logic"}:
+            input_kind = "manual"
+        action_name_raw = str(entry.get("action_name", "") or "").strip()
+        action_name = action_name_raw[:120] if action_name_raw else None
+
+        rows.append(
+            (
+                ongoing_game_id,
+                seq_no,
+                row_idx,
+                col_idx,
+                value,
+                input_kind,
+                action_name,
+                elapsed_seconds,
+                entered_at,
+            )
+        )
+
+    if not rows:
+        return
+
+    with get_connection(database_path) as conn:
+        conn.executemany(
+            """
+            INSERT INTO sudoku_game_inputs
+                (ongoing_game_id, seq_no, row_idx, col_idx, value, input_kind, action_name, elapsed_seconds, entered_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(ongoing_game_id, seq_no) DO NOTHING
+            """,
+            rows,
+        )
+        conn.commit()
+
+
+def list_game_inputs(database_path: str, ongoing_game_id: int) -> list[dict[str, Any]]:
+    with get_connection(database_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT id,
+                   ongoing_game_id,
+                   seq_no,
+                   row_idx,
+                   col_idx,
+                   value,
+                     input_kind,
+                     action_name,
+                   elapsed_seconds,
+                   entered_at,
+                   datetime(created_at, 'localtime') AS created_at
+            FROM sudoku_game_inputs
+            WHERE ongoing_game_id = ?
+            ORDER BY seq_no ASC, id ASC
             """,
             (ongoing_game_id,),
         ).fetchall()

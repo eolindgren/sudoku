@@ -58,6 +58,26 @@
     .view-link:hover {
       background: #14532d;
     }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .delete-btn {
+      border: 1px solid #dc2626;
+      border-radius: 8px;
+      background: #fef2f2;
+      color: #991b1b;
+      padding: 7px 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .delete-btn:hover {
+      background: #fee2e2;
+    }
     .meta {
       display: flex;
       gap: 10px;
@@ -89,12 +109,19 @@
       {% endif %}
     {% endwith %}
 
+    {% set difficulty_labels = {'latt': 'Lätt', 'medel': 'Medel', 'svar': 'Svår', 'expert': 'Expert'} %}
+
     {% if games %}
       {% for game in games %}
         <article class="game">
           <div class="game-head">
-            <h3>{{ game.difficulty|capitalize }}: {{ game.title }}</h3>
-            <a class="view-link" href="{{ url_for('main.completed_game_detail', game_id=game.id) }}">Visa spel och ändringar</a>
+            <h3>{{ difficulty_labels.get(game.difficulty, game.difficulty|capitalize) }}: {{ game.title }}</h3>
+            <div class="actions">
+              <a class="view-link" href="{{ url_for('main.completed_game_detail', game_id=game.id) }}">Visa spel och ändringar</a>
+              <form method="post" action="{{ url_for('main.delete_completed_game', game_id=game.id) }}" onsubmit="return confirm('Radera denna avslutade omgång?');">
+                <button type="submit" class="delete-btn">Radera omgång</button>
+              </form>
+            </div>
           </div>
           <div class="meta">
             <span>Avslutat: {{ game.completed_at }}</span>

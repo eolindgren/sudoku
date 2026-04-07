@@ -95,6 +95,20 @@
       color: #475569;
       margin-top: 4px;
     }
+    .delete-btn {
+      border: 1px solid #dc2626;
+      border-radius: 8px;
+      background: #fef2f2;
+      color: #991b1b;
+      padding: 7px 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .delete-btn:hover {
+      background: #fee2e2;
+    }
     .empty {
       color: #64748b;
       margin: 0;
@@ -108,10 +122,15 @@
       <a class="top-link" href="{{ url_for('main.index') }}">Startsida</a>
       <a class="top-link" href="{{ url_for('main.completed_games') }}">Avslutade</a>
       <a class="top-link" href="{{ url_for('main.leaderboard') }}">Topplista</a>
+      <form method="post" action="{{ url_for('main.delete_completed_game', game_id=game.id) }}" style="display:inline-block; margin-left:8px;" onsubmit="return confirm('Radera denna avslutade omgång?');">
+        <button type="submit" class="delete-btn">Radera omgång</button>
+      </form>
     </p>
 
+    {% set difficulty_labels = {'latt': 'Lätt', 'medel': 'Medel', 'svar': 'Svår', 'expert': 'Expert'} %}
+
     <div class="meta">
-      <span>Svårighet: {{ game.difficulty|capitalize }}</span>
+      <span>Svårighet: {{ difficulty_labels.get(game.difficulty, game.difficulty|capitalize) }}</span>
       <span>Tid: {{ game.elapsed_seconds|format_time }}</span>
       <span>Avslutat: {{ game.completed_at }}</span>
     </div>
@@ -127,21 +146,22 @@
         {% endfor %}
       </section>
 
-      <section class="history" aria-label="Alla ändringar">
-        <h3>Alla ändringar</h3>
-        {% if changes %}
-          {% for change in changes %}
+      <section class="history" aria-label="Alla inmatningar">
+        <h3>Alla inmatningar</h3>
+        {% if input_entries %}
+          {% for entry in input_entries %}
             <article class="history-item">
-              <div class="history-time">{{ change.changed_at }}</div>
+              <div class="history-time">#{{ entry.seq_no }} | {{ entry.entered_at or entry.created_at }}</div>
               <div>
-                Rad {{ change.row_idx + 1 }}, kol {{ change.col_idx + 1 }}
-                | Värde: {{ change.old_value or '-' }} -> {{ change.new_value or '-' }}
-                | Anteckning: {{ change.old_notes or '-' }} -> {{ change.new_notes or '-' }}
+                Rad {{ entry.row_idx + 1 }}, kol {{ entry.col_idx + 1 }}
+                | Inslag: {{ entry.value }}
+                | Källa: {% if entry.input_kind == 'logic' %}Logik{% else %}Manuell{% endif %}{% if entry.input_kind == 'logic' and entry.action_name %} ({{ entry.action_name }}){% endif %}
+                | Speltid: {{ entry.elapsed_seconds|format_time }}
               </div>
             </article>
           {% endfor %}
         {% else %}
-          <p class="empty">Inga sparade ändringar hittades för spelet.</p>
+          <p class="empty">Inga sparade inmatningar hittades för spelet.</p>
         {% endif %}
       </section>
     </div>

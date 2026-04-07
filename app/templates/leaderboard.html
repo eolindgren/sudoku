@@ -43,6 +43,31 @@
       flex-direction: column;
       gap: 10px;
     }
+    .difficulty-section {
+      margin-top: 18px;
+    }
+    .difficulty-section:first-of-type {
+      margin-top: 0;
+    }
+    .difficulty-title {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      color: #14532d;
+      border-bottom: 1px solid #d9f99d;
+      padding-bottom: 6px;
+    }
+    .difficulty-link {
+      color: inherit;
+      text-decoration: none;
+    }
+    .difficulty-link:hover {
+      text-decoration: underline;
+    }
+    .difficulty-meta {
+      margin: 4px 0 0;
+      font-size: 0.84rem;
+      color: #64748b;
+    }
     .leaderboard-item {
       display: flex;
       align-items: center;
@@ -91,25 +116,53 @@
   </style>
 </head>
 <body>
+  {% set selected_key = request.args.get('difficulty', '')|lower|replace('å', 'a')|replace('ä', 'a')|replace('ö', 'o') %}
   <main class="wrap">
     <div class="header">
-      <h1>Full topplista</h1>
+      <h1>{% if selected_key %}Topplista per svårighetsgrad{% else %}Topplista per svårighetsgrad{% endif %}</h1>
       <a class="top-link" href="{{ url_for('main.index') }}">Till startsidan</a>
     </div>
 
-    {% if leaderboard %}
-      <div class="leaderboard-list">
-        {% for item in leaderboard %}
-          <a class="leaderboard-item" href="{{ url_for('main.completed_game_detail', game_id=item.ongoing_game_id) }}">
-            <div class="rank">#{{ loop.index }}</div>
-            <div class="main">
-              <div class="title">{{ item.game_title }}</div>
-              <div class="meta">Svårighet: {{ item.difficulty|capitalize }} | Klar: {{ item.completed_at }}</div>
-            </div>
-            <div class="time">{{ item.elapsed_seconds|format_time }}</div>
-          </a>
-        {% endfor %}
+    {% if selected_key %}
+      <div class="header" style="margin-top:-6px; margin-bottom: 14px;">
+        <a class="top-link" href="{{ url_for('main.leaderboard') }}">Tillbaka till alla svårighetsgrader</a>
       </div>
+    {% endif %}
+
+    {% if grouped_leaderboard is defined and grouped_leaderboard %}
+      {% for group in grouped_leaderboard %}
+        {% if not selected_key or group.key == selected_key %}
+        <section class="difficulty-section">
+          <h2 class="difficulty-title">
+            {% if not selected_key %}
+              <a class="difficulty-link" href="{{ url_for('main.leaderboard', difficulty=group.key) }}">{{ group.label }}</a>
+            {% else %}
+              {{ group.label }}
+            {% endif %}
+          </h2>
+          {% if not selected_key and group.rows|length > 5 %}
+            <p class="difficulty-meta">Visar 5 bästa av {{ group.rows|length }} tider.</p>
+          {% endif %}
+          <div class="leaderboard-list">
+            {% if selected_key %}
+              {% set visible_rows = group.rows %}
+            {% else %}
+              {% set visible_rows = group.rows[:5] %}
+            {% endif %}
+            {% for item in visible_rows %}
+              <a class="leaderboard-item" href="{{ url_for('main.completed_game_detail', game_id=item.ongoing_game_id) }}">
+                <div class="rank">#{{ loop.index }}</div>
+                <div class="main">
+                  <div class="title">{{ item.game_title }}</div>
+                  <div class="meta">Klar: {{ item.completed_at }}</div>
+                </div>
+                <div class="time">{{ item.elapsed_seconds|format_time }}</div>
+              </a>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+      {% endfor %}
     {% else %}
       <p class="empty">Ingen klar topptid ännu.</p>
     {% endif %}
